@@ -1,0 +1,301 @@
+/* ===================================================================
+   PRMES Design System
+   Concept: "Engineering Blueprint" — the product is a system that
+   tracks project work at an engineering college, so the surface
+   itself borrows from technical drawings: ruled grids, dimension
+   labels in mono type, and signal-trace connectors that light up
+   as data moves through the pipeline (team -> guide -> evaluation).
+   =================================================================== */
+
+:root {
+  --font-display: 'Space Grotesk', 'Segoe UI', sans-serif;
+  --font-body: 'Inter', 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --max-width: 1240px;
+  --nav-height: 76px;
+}
+
+/* ---------- Dark theme (default) ---------- */
+[data-theme='dark'] {
+  --bg-canvas: #0a111d;
+  --bg-canvas-alt: #0e1728;
+  --bg-surface: #101d31;
+  --bg-surface-raised: #14233a;
+  --grid-line: rgba(45, 212, 232, 0.07);
+  --grid-line-strong: rgba(45, 212, 232, 0.16);
+
+  --text-primary: #eef3f9;
+  --text-secondary: #9fb0c6;
+  --text-muted: #6b7c93;
+
+  --accent-cyan: #2dd4e8;
+  --accent-cyan-soft: rgba(45, 212, 232, 0.14);
+  --accent-amber: #f2a93b;
+  --accent-amber-soft: rgba(242, 169, 59, 0.14);
+
+  --border-hairline: rgba(148, 178, 209, 0.14);
+  --border-hairline-strong: rgba(148, 178, 209, 0.26);
+
+  --shadow-elevated: 0 20px 60px -20px rgba(0, 0, 0, 0.6);
+  --shadow-card: 0 10px 30px -12px rgba(0, 0, 0, 0.45);
+
+  --glass-bg: rgba(14, 23, 40, 0.72);
+  --glass-border: rgba(148, 178, 209, 0.16);
+
+  color-scheme: dark;
+}
+
+/* ---------- Light theme ---------- */
+[data-theme='light'] {
+  --bg-canvas: #f5f7fa;
+  --bg-canvas-alt: #eef1f6;
+  --bg-surface: #ffffff;
+  --bg-surface-raised: #ffffff;
+  --grid-line: rgba(27, 39, 52, 0.05);
+  --grid-line-strong: rgba(27, 39, 52, 0.1);
+
+  --text-primary: #131c27;
+  --text-secondary: #47576b;
+  --text-muted: #7c8ba0;
+
+  --accent-cyan: #0891a8;
+  --accent-cyan-soft: rgba(8, 145, 168, 0.1);
+  --accent-amber: #b9770e;
+  --accent-amber-soft: rgba(185, 119, 14, 0.12);
+
+  --border-hairline: rgba(19, 28, 39, 0.1);
+  --border-hairline-strong: rgba(19, 28, 39, 0.18);
+
+  --shadow-elevated: 0 20px 50px -24px rgba(19, 28, 39, 0.25);
+  --shadow-card: 0 10px 26px -14px rgba(19, 28, 39, 0.18);
+
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(19, 28, 39, 0.08);
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.4s var(--ease-out), color 0.4s var(--ease-out);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+::selection {
+  background: var(--accent-cyan-soft);
+  color: var(--text-primary);
+}
+
+/* ---------- Shared layout ---------- */
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+section {
+  position: relative;
+}
+
+.section-pad {
+  padding: 120px 0;
+}
+
+@media (max-width: 900px) {
+  .section-pad {
+    padding: 84px 0;
+  }
+  .container {
+    padding: 0 20px;
+  }
+}
+
+/* Blueprint grid backdrop — used behind hero + section dividers */
+.blueprint-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 56px 56px;
+  pointer-events: none;
+}
+
+/* Eyebrow / dimension label — mono, tracked out, like a drawing annotation */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+}
+
+.eyebrow::before {
+  content: '';
+  width: 18px;
+  height: 1px;
+  background: var(--accent-cyan);
+}
+
+.section-heading {
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 14px;
+  max-width: 640px;
+}
+
+.section-sub {
+  margin-top: 16px;
+  font-size: 16.5px;
+  max-width: 560px;
+}
+
+.section-head-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 56px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14.5px;
+  padding: 13px 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out), background 0.25s var(--ease-out), border-color 0.25s var(--ease-out);
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--accent-cyan);
+  color: #06171d;
+  box-shadow: 0 8px 24px -8px var(--accent-cyan-soft);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px -10px var(--accent-cyan-soft);
+}
+
+.btn-outline {
+  background: transparent;
+  border-color: var(--border-hairline-strong);
+  color: var(--text-primary);
+}
+
+.btn-outline:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  transform: translateY(-2px);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 10px 16px;
+}
+
+.btn-ghost:hover {
+  color: var(--text-primary);
+}
+
+/* Cards */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.35s var(--ease-out), border-color 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out);
+}
+
+.card:hover {
+  transform: translateY(-6px);
+  border-color: var(--border-hairline-strong);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-canvas);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-hairline-strong);
+  border-radius: 8px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,213 @@
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  transition: background 0.35s var(--ease-out), border-color 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out);
+  border-bottom: 1px solid transparent;
+}
+
+.navbar--scrolled {
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-card);
+}
+
+.navbar__inner {
+  height: var(--nav-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.navbar__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.navbar__mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-cyan-soft);
+  color: var(--accent-cyan);
+  font-size: 20px;
+  border: 1px solid var(--border-hairline);
+}
+
+.navbar__brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.navbar__brand-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+}
+
+.navbar__brand-sub {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.navbar__links {
+  display: flex;
+  align-items: center;
+  gap: 34px;
+}
+
+.navbar__link {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  position: relative;
+  padding: 6px 0;
+  transition: color 0.25s var(--ease-out);
+}
+
+.navbar__link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 1.5px;
+  background: var(--accent-cyan);
+  transition: width 0.3s var(--ease-out);
+}
+
+.navbar__link:hover {
+  color: var(--text-primary);
+}
+
+.navbar__link:hover::after {
+  width: 100%;
+}
+
+.navbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.navbar__theme-toggle {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hairline);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 18px;
+  overflow: hidden;
+  transition: border-color 0.25s var(--ease-out), color 0.25s var(--ease-out);
+}
+
+.navbar__theme-toggle:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+.navbar__theme-icon {
+  display: grid;
+  place-items: center;
+}
+
+.navbar__burger {
+  display: none;
+  border: 1px solid var(--border-hairline);
+  background: transparent;
+  color: var(--text-primary);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  font-size: 20px;
+  align-items: center;
+  justify-content: center;
+}
+
+.navbar__mobile-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 20px 26px;
+}
+
+.navbar__mobile-link {
+  padding: 12px 4px;
+  font-size: 15.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.navbar__mobile-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.navbar__mobile-actions .btn {
+  flex: 1;
+}
+
+.navbar__mobile {
+  overflow: hidden;
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+@media (max-width: 900px) {
+  .navbar__links,
+  .navbar__login,
+  .navbar__register {
+    display: none;
+  }
+  .navbar__burger {
+    display: flex;
+  }
+  .navbar__brand-sub {
+    display: none;
+  }
+}
+.navbar__mark {
+  width: 55px;
+  height: 55px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navbar__logo {
+  width: 120px;   /* or 140px */
+  height: auto;
+  display: flex;
+  align-items: center;
+}
+
+.navbar__logo img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
