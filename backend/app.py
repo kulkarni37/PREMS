@@ -6,7 +6,9 @@ from config import Config
 from database.db import db
 from services.email_service import init_mail
 from routes.auth_routes import auth_bp
-from models.user import User
+from routes.student_routes import student_bp
+from routes.admin_routes import admin_bp
+from models import User, Institution, Department
 
 def create_app():
     app = Flask(__name__)
@@ -21,47 +23,87 @@ def create_app():
 
     # Register Blueprints
     app.register_blueprint(auth_bp)
+    app.register_blueprint(student_bp)
+    app.register_blueprint(admin_bp)
 
     @app.route('/')
     def root():
         return jsonify({
             'status': 'online',
-            'system': 'PRMES API Backend',
-            'version': '1.0.0',
-            'institution': 'Guru Nanak Dev Engineering College, Bidar'
+            'system': 'PRMES API Backend (MySQL Engine)',
+            'version': '2.1.0',
+            'database': 'MySQL'
         })
 
-    # Create tables & seed default test student if database is fresh
+    # Create tables
     with app.app_context():
-        db.create_all()
-        seed_default_user()
+        try:
+            db.create_all()
+            if os.getenv('SEED_DEMO_DATA', 'false').lower() == 'true':
+                seed_default_hierarchy()
+        except Exception as e:
+            err_str = str(e)
+            print("\n" + "=" * 70)
+            print("[DATABASE WARNING / NOTICE]")
+            if "1049" in err_str or "Unknown database" in err_str:
+                print("The MySQL database 'prmes' does not exist yet.")
+                print("Please execute the following command in MySQL to create it:")
+                print("\n    CREATE DATABASE prmes;\n")
+            else:
+                print(f"MySQL Database connection error: {e}")
+                print("Please check your DATABASE_URL credentials in backend/.env file.")
+            print("=" * 70 + "\n")
 
     return app
 
-def seed_default_user():
+def seed_default_hierarchy():
     """
-    Seeds a default student account for instant testing if database is empty.
+    Seeds default Institution (GNDEC), Department (CSE), Admin, Coordinator, Guide, & Student accounts if explicitly enabled.
     """
-    default_student_id = "PRMES-STU-2026-0001"
-    default_email = "you@gndec.edu.in"
-
-    existing = User.query.filter_by(student_id=default_student_id).first()
-    if not existing:
-        student = User(
-            student_id=default_student_id,
-            full_name="PRMES Student User",
-            usn="3GN22CS045",
-            email=default_email,
-            phone="9876543210",
-            college="Guru Nanak Dev Engineering College, Bidar",
-            department="Computer Science & Engineering",
-            semester="7th Semester",
-            section="A"
+    inst = Institution.query.filter_by(institution_code='GNDEC').first()
+    if not inst:
+        inst = Institution(
+            institution_name='Guru Nanak Dev Engineering College, Bidar',
+            institution_code='GNDEC',
+            official_email='info@gndec.edu.in',
+            phone='08482-226148',
+            address='Mailoor Road, Bidar, Karnataka',
+            state='Karnataka',
+            contact_person='Principal Office'
         )
-        student.set_password("Password123!")
-        db.session.add(student)
-        db.session.commit()
-        print(f"[DB SEED] Sample student initialized: {default_student_id} ({default_email})")
+        db.session.add(inst)
+        db.session.flush()
+
+    dept = Department.query.filter_by(department_code='CSE').first()
+    if not dept:
+        dept = Department(
+            institution_id=inst.id,
+            department_name='Computer Science & Engineering',
+            department_code='CSE'
+        )
+        db.session.add(dept)
+        db.session.flush()
+
+    default_admin_id = "PRMES-ADM-2026-0001"
+    admin_email = "admin@gndec.edu.in"
+    existing_admin = User.query.filter_by(email=admin_email).first()
+    if not existing_admin:
+        admin_user = User(
+            role='ADMIN',
+            student_id=default_admin_id,
+            full_name="System Administrator",
+            email=admin_email,
+            phone="9876543211",
+            institution_id=inst.id,
+            department_id=dept.id,
+            college="Guru Nanak Dev Engineering College, Bidar",
+            department="Computer Science & Engineering"
+        )
+        admin_user.set_password("AdminPass123!")
+        db.session.add(admin_user)
+
+    db.session.commit()
+    print(f"[DB SEED] PRMES MySQL Hierarchy initialized for {inst.institution_name}")
 
 if __name__ == '__main__':
     app = create_app()

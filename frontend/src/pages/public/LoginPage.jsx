@@ -54,17 +54,29 @@ export default function Login() {
     setSuccessMsg('');
 
     if (!email || !password) {
-      setErrorMsg('Please enter both email and password.');
+      setErrorMsg('Please enter both email/ID and password.');
       return;
     }
 
     try {
       setLoading(true);
       const res = await loginStudent(email, password);
-      if (res.success) {
-        setSuccessMsg('Login successful! Redirecting...');
-        // Store user in localStorage if needed
+      if (res && res.success) {
+        setSuccessMsg('Login successful! Redirecting to workspace...');
         localStorage.setItem('prmes_user', JSON.stringify(res.user));
+
+        const role = (res.user?.role || '').toUpperCase();
+        setTimeout(() => {
+          if (role === 'ADMIN') {
+            navigate('/admin/dashboard');
+          } else if (role === 'COORDINATOR') {
+            navigate('/coordinator/dashboard');
+          } else if (role === 'GUIDE') {
+            navigate('/guide/dashboard');
+          } else {
+            navigate('/student/dashboard');
+          }
+        }, 500);
       }
     } catch (err) {
       setErrorMsg(err.message || 'Invalid email or password.');
@@ -161,7 +173,7 @@ export default function Login() {
           <div className="login-card__head">
             <span className="login-card__wave">👋</span>
             <h2 className="login-card__title">Welcome Back</h2>
-            <p className="login-card__sub">Sign in to continue to PRMES</p>
+            <p className="login-card__sub">Sign in to continue to PRMES Portal</p>
           </div>
 
           {errorMsg && (
@@ -199,16 +211,16 @@ export default function Login() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
             >
-              <label htmlFor="login-email">Email Address</label>
+              <label htmlFor="login-email">Email Address or Account ID</label>
               <div className="login-input">
                 <PiEnvelopeSimple className="login-input__icon" />
                 <input
                   id="login-email"
                   name="email"
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@gndec.edu.in"
+                  placeholder="you@gndec.edu.in or PRMES-STU-XXXX"
                   autoComplete="email"
                   required
                 />
@@ -288,7 +300,7 @@ export default function Login() {
           >
             Don&rsquo;t have an account?{' '}
             <Link to="/register" className="login-card__link">
-              Register
+              Register as Student
             </Link>
           </motion.p>
         </motion.div>

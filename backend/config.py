@@ -7,10 +7,10 @@ load_dotenv()
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'prmes_secret_key_2026_gndec_cse')
 
-    # Database Configuration (MySQL by default, with SQLite fallback if MySQL is not configured)
+    # Database Configuration (MySQL with PyMySQL driver)
     SQLALCHEMY_DATABASE_URI = os.getenv(
         'DATABASE_URL',
-        'sqlite:///prmes.db'
+        'mysql+pymysql://root:root@localhost:3306/prmes'
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

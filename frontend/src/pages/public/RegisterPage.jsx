@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from "react-router-dom";
+import { Link } from 'react-router-dom';
 import {
   PiCircuitry,
   PiUserCircle,
@@ -16,11 +16,12 @@ import {
   PiEyeSlash,
   PiSealCheck,
   PiX,
+  PiUsersThree,
+  PiUser
 } from 'react-icons/pi';
-import { registerStudent } from '../../services/api';
+import { registerStudent, fetchInstitutions, fetchDepartments } from '../../services/api';
 import '../../styles/register.css';
 
-/* Fixed layout so particles don't jump between renders */
 const PARTICLES = [
   { top: '10%', left: '14%', size: 4, duration: 9, delay: 0 },
   { top: '20%', left: '82%', size: 3, duration: 11, delay: 0.5 },
@@ -34,12 +35,8 @@ const PARTICLES = [
   { top: '94%', left: '46%', size: 4, duration: 11.5, delay: 0.6 },
 ];
 
-const DEPARTMENT = 'Computer Science & Engineering';
-const STUDENT_ID = 'PRMES-STU-2026-0001';
-
 function getPasswordStrength(password) {
   if (!password) return { score: 0, label: 'Weak', percent: 0 };
-
   let score = 0;
   if (password.length >= 8) score += 1;
   if (password.length >= 12) score += 1;
@@ -53,6 +50,14 @@ function getPasswordStrength(password) {
 }
 
 export default function RegisterPage() {
+  const [selectedRole, setSelectedRole] = useState('TEAM_LEADER'); // 'TEAM_LEADER' or 'STUDENT'
+  
+  // Dynamic Organization & Department state
+  const [organizations, setOrganizations] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [selectedOrgId, setSelectedOrgId] = useState('');
+  const [selectedDeptId, setSelectedDeptId] = useState('');
+
   const [form, setForm] = useState({
     fullName: '',
     usn: '',
@@ -60,16 +65,57 @@ export default function RegisterPage() {
     phone: '',
     password: '',
     confirmPassword: '',
+    semester: '7th Semester',
+    section: 'A'
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [registeredStudentId, setRegisteredStudentId] = useState(STUDENT_ID);
+  const [registeredStudentId, setRegisteredStudentId] = useState('PRMES-STU-2026-0001');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [agreed, setAgreed] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  // Fetch active organizations on component mount
+  useEffect(() => {
+    const loadOrgs = async () => {
+      try {
+        const res = await fetchInstitutions();
+        const list = res?.organizations || res?.institutions || [];
+        setOrganizations(list);
+        if (list.length > 0) {
+          setSelectedOrgId(list[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to load organizations:', err);
+      }
+    };
+    loadOrgs();
+  }, []);
+
+  // Fetch departments when selected Organization changes
+  useEffect(() => {
+    if (selectedOrgId) {
+      const loadDepts = async () => {
+        try {
+          const res = await fetchDepartments(selectedOrgId);
+          const list = res?.departments || [];
+          setDepartments(list);
+          if (list.length > 0) {
+            setSelectedDeptId(list[0].id);
+          } else {
+            setSelectedDeptId('');
+          }
+        } catch (err) {
+          console.error('Failed to load departments:', err);
+        }
+      };
+      loadDepts();
+    }
+  }, [selectedOrgId]);
 
   const strength = useMemo(() => getPasswordStrength(form.password), [form.password]);
-  const passwordsMatch =
-    form.confirmPassword.length === 0 || form.confirmPassword === form.password;
+  const passwordsMatch = form.confirmPassword.length === 0 || form.confirmPassword === form.password;
 
   const handleChange = (field) => (e) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -80,14 +126,33 @@ export default function RegisterPage() {
     setErrorMsg('');
     if (!agreed) return;
 
+    if (!passwordsMatch) {
+      setErrorMsg('Passwords do not match.');
+      return;
+    }
+
     try {
       setLoading(true);
-      const res = await registerStudent(form);
-      if (res.success) {
+      const selectedOrg = organizations.find(o => String(o.id) === String(selectedOrgId));
+      const selectedDept = departments.find(d => String(d.id) === String(selectedDeptId));
+
+      const payload = {
+        ...form,
+        role: selectedRole,
+        institution_id: selectedOrgId,
+        department_id: selectedDeptId,
+        college: selectedOrg ? selectedOrg.institution_name : 'Guru Nanak Dev Engineering College',
+        department: selectedDept ? selectedDept.department_name : 'Computer Science & Engineering'
+      };
+
+      const res = await registerStudent(payload);
+      if (res && res.success) {
         if (res.student_id) {
           setRegisteredStudentId(res.student_id);
         }
         setShowSuccess(true);
+      } else {
+        setErrorMsg(res?.message || 'Registration failed.');
       }
     } catch (err) {
       setErrorMsg(err.message || 'Registration failed.');
@@ -133,13 +198,77 @@ export default function RegisterPage() {
             </span>
             <span className="register-card__logo-text">PRMES</span>
           </div>
-          <h1 className="register-card__title">Create Your Student Account</h1>
+          <h1 className="register-card__title">Create Your PRMES Account</h1>
           <p className="register-card__sub">
-            Register your team profile to start your project journey on PRMES.
+            Project Review Management &amp; Evaluation System
           </p>
         </div>
 
+        {errorMsg && (
+          <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-sm)', background: 'rgba(255, 98, 89, 0.12)', border: '1px solid rgba(255, 98, 89, 0.3)', color: '#ff6259', fontSize: '13.5px', marginBottom: '20px' }}>
+            ⚠️ {errorMsg}
+          </div>
+        )}
+
         <form className="register-form" onSubmit={handleSubmit} noValidate>
+          {/* ---------------- Choose Account Type ---------------- */}
+          <motion.div
+            className="register-section"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <span className="register-section__label">Choose Account Type</span>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '8px' }}>
+              {/* Option 1: Team Leader */}
+              <div
+                onClick={() => setSelectedRole('TEAM_LEADER')}
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: selectedRole === 'TEAM_LEADER' ? 'var(--accent-cyan-soft)' : 'var(--bg-surface)',
+                  border: selectedRole === 'TEAM_LEADER' ? '1px solid var(--accent-cyan)' : '1px solid var(--border-hairline)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease-out'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <PiUsersThree style={{ color: selectedRole === 'TEAM_LEADER' ? 'var(--accent-cyan)' : 'var(--text-muted)', fontSize: 20 }} />
+                  <span style={{ fontWeight: 700, fontSize: '14.5px', color: selectedRole === 'TEAM_LEADER' ? 'var(--accent-cyan)' : 'var(--text-primary)' }}>
+                    Team Leader
+                  </span>
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  Create and manage your project team.
+                </div>
+              </div>
+
+              {/* Option 2: Student */}
+              <div
+                onClick={() => setSelectedRole('STUDENT')}
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: selectedRole === 'STUDENT' ? 'var(--accent-cyan-soft)' : 'var(--bg-surface)',
+                  border: selectedRole === 'STUDENT' ? '1px solid var(--accent-cyan)' : '1px solid var(--border-hairline)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease-out'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <PiUser style={{ color: selectedRole === 'STUDENT' ? 'var(--accent-cyan)' : 'var(--text-muted)', fontSize: 20 }} />
+                  <span style={{ fontWeight: 700, fontSize: '14.5px', color: selectedRole === 'STUDENT' ? 'var(--accent-cyan)' : 'var(--text-primary)' }}>
+                    Student
+                  </span>
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  Register as a student and join a project team.
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
           {/* ---------------- Personal Details ---------------- */}
           <motion.div
             className="register-section"
@@ -151,7 +280,7 @@ export default function RegisterPage() {
 
             <div className="register-grid register-grid--2">
               <div className="register-field">
-                <label htmlFor="reg-fullname">Full Name</label>
+                <label htmlFor="reg-fullname">Full Name *</label>
                 <div className="register-input">
                   <PiUserCircle className="register-input__icon" />
                   <input
@@ -167,7 +296,7 @@ export default function RegisterPage() {
               </div>
 
               <div className="register-field">
-                <label htmlFor="reg-usn">USN</label>
+                <label htmlFor="reg-usn">USN / Student ID *</label>
                 <div className="register-input">
                   <PiIdentificationCard className="register-input__icon" />
                   <input
@@ -183,7 +312,7 @@ export default function RegisterPage() {
               </div>
 
               <div className="register-field">
-                <label htmlFor="reg-email">College Email</label>
+                <label htmlFor="reg-email">College Email *</label>
                 <div className="register-input">
                   <PiEnvelopeSimple className="register-input__icon" />
                   <input
@@ -209,7 +338,6 @@ export default function RegisterPage() {
                     value={form.phone}
                     onChange={handleChange('phone')}
                     autoComplete="tel"
-                    required
                   />
                 </div>
               </div>
@@ -226,24 +354,51 @@ export default function RegisterPage() {
             <span className="register-section__label">Academic Details</span>
 
             <div className="register-grid register-grid--2">
+              {/* Dynamic Organization / College Dropdown */}
               <div className="register-field">
-                <label htmlFor="reg-college">College</label>
-                <div className="register-input register-input--readonly">
+                <label htmlFor="reg-college">Organization / College *</label>
+                <div className="register-input">
                   <PiBuildings className="register-input__icon" />
-                  <input
+                  <select
                     id="reg-college"
-                    type="text"
-                    value="Guru Nanak Dev Engineering College, Bidar"
-                    readOnly
-                  />
+                    value={selectedOrgId}
+                    onChange={(e) => setSelectedOrgId(e.target.value)}
+                    required
+                  >
+                    {organizations.length === 0 ? (
+                      <option value="">Guru Nanak Dev Engineering College</option>
+                    ) : (
+                      organizations.map((org) => (
+                        <option key={org.id} value={org.id}>
+                          {org.institution_name} ({org.institution_code})
+                        </option>
+                      ))
+                    )}
+                  </select>
                 </div>
               </div>
 
+              {/* Dynamic Department Dropdown */}
               <div className="register-field">
-                <label htmlFor="reg-dept">Department</label>
-                <div className="register-input register-input--readonly">
+                <label htmlFor="reg-dept">Department *</label>
+                <div className="register-input">
                   <PiCode className="register-input__icon" />
-                  <input id="reg-dept" type="text" value={DEPARTMENT} readOnly />
+                  <select
+                    id="reg-dept"
+                    value={selectedDeptId}
+                    onChange={(e) => setSelectedDeptId(e.target.value)}
+                    required
+                  >
+                    {departments.length === 0 ? (
+                      <option value="">Computer Science &amp; Engineering</option>
+                    ) : (
+                      departments.map((dept) => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.department_name} ({dept.department_code})
+                        </option>
+                      ))
+                    )}
+                  </select>
                 </div>
               </div>
 
@@ -251,8 +406,12 @@ export default function RegisterPage() {
                 <label htmlFor="reg-semester">Semester</label>
                 <div className="register-input">
                   <PiBookOpen className="register-input__icon" />
-                  <select id="reg-semester" required defaultValue="7th Semester">
-                    <option value="">Select Semester</option>
+                  <select
+                    id="reg-semester"
+                    value={form.semester}
+                    onChange={handleChange('semester')}
+                    required
+                  >
                     <option value="1st Semester">1st Semester</option>
                     <option value="2nd Semester">2nd Semester</option>
                     <option value="3rd Semester">3rd Semester</option>
@@ -269,8 +428,12 @@ export default function RegisterPage() {
                 <label htmlFor="reg-section">Section</label>
                 <div className="register-input">
                   <PiChalkboard className="register-input__icon" />
-                  <select id="reg-section" required>
-                    <option value="">Select Section</option>
+                  <select
+                    id="reg-section"
+                    value={form.section}
+                    onChange={handleChange('section')}
+                    required
+                  >
                     <option value="A">A</option>
                     <option value="B">B</option>
                     <option value="C">C</option>
@@ -287,11 +450,11 @@ export default function RegisterPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
           >
-            <span className="register-section__label">Account Details</span>
+            <span className="register-section__label">Account Security</span>
 
             <div className="register-grid register-grid--2">
               <div className="register-field">
-                <label htmlFor="reg-password">Password</label>
+                <label htmlFor="reg-password">Password *</label>
                 <div className="register-input">
                   <PiLockKey className="register-input__icon" />
                   <input
@@ -315,7 +478,7 @@ export default function RegisterPage() {
               </div>
 
               <div className="register-field">
-                <label htmlFor="reg-confirm-password">Confirm Password</label>
+                <label htmlFor="reg-confirm-password">Confirm Password *</label>
                 <div
                   className={`register-input ${
                     !passwordsMatch ? 'register-input--error' : ''
@@ -379,20 +542,20 @@ export default function RegisterPage() {
               onChange={(e) => setAgreed(e.target.checked)}
             />
             <span className="register-terms__box" />
-          I hereby certify that the information provided above is true and correct to the best of my knowledge.
+            I hereby certify that the information provided above is true and correct to the best of my knowledge.
           </motion.label>
 
           <motion.button
             type="submit"
             className="register-submit"
-            disabled={!agreed}
+            disabled={!agreed || loading}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
             whileHover={agreed ? { y: -3 } : {}}
             whileTap={agreed ? { y: 0, scale: 0.98 } : {}}
           >
-            Create Account
+            {loading ? 'Creating Account...' : selectedRole === 'TEAM_LEADER' ? 'Register as Team Leader' : 'Register as Student'}
           </motion.button>
         </form>
 
@@ -404,8 +567,8 @@ export default function RegisterPage() {
         >
           Already have an account?{' '}
           <Link to="/login" className="register-card__link">
-  Login
-</Link>
+            Login
+          </Link>
         </motion.p>
       </motion.div>
 
@@ -443,22 +606,33 @@ export default function RegisterPage() {
               </span>
 
               <h2 id="register-modal-title" className="register-modal__title">
-                🎉 Registration Successful
+                🎉 Registration Successful!
               </h2>
-              <p className="register-modal__desc">
-               Your PRMES account has been created successfully.
 
-Please save your Student ID for future reference.
-              </p>
+              {selectedRole === 'TEAM_LEADER' ? (
+                <p className="register-modal__desc">
+                  Your Team Leader account has been created successfully.
+                  <br />
+                  <br />
+                  You can now log in and create/register your project team.
+                </p>
+              ) : (
+                <p className="register-modal__desc">
+                  Thank you for registering with PRMES. Your student account has been created successfully.
+                  <br />
+                  <br />
+                  Your project team will be assigned through a Team Leader. You will receive an email and notification when you are added to a project team.
+                </p>
+              )}
 
               <div className="register-modal__id">
-                <span className="register-modal__id-label">Student ID</span>
+                <span className="register-modal__id-label">{selectedRole === 'TEAM_LEADER' ? 'Team Leader ID' : 'Student ID'}</span>
                 <span className="register-modal__id-value">{registeredStudentId}</span>
               </div>
 
               <Link to="/login" className="register-modal__btn">
-  Go To Login
-</Link>
+                Go To Login
+              </Link>
             </motion.div>
           </motion.div>
         )}

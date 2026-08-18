@@ -1,0 +1,279 @@
+/* ===================================================================
+   PRMES Organization Registration Page Styles
+   Polished SaaS Institutional Design: Centered Glass Card, 2-Column Grid,
+   Full-Width Fluid Inputs, Premium Cyberpunk Accents.
+   =================================================================== */
+
+.org-reg-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  position: relative;
+  overflow-x: hidden;
+}
+
+.org-reg-container {
+  max-width: 1150px;
+  margin: 36px auto;
+  padding: 0 24px;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 2;
+}
+
+.org-reg-card {
+  border-radius: 20px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-card), 0 0 40px -12px var(--accent-cyan-soft);
+  padding: 40px 48px;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.org-reg-head {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.org-reg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--accent-cyan-soft);
+  border: 1px solid var(--border-hairline-strong);
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.org-reg-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+  letter-spacing: -0.01em;
+}
+
+.org-reg-sub {
+  font-size: 14.5px;
+  color: var(--text-secondary);
+  max-width: 640px;
+  margin: 0 auto;
+  line-height: 1.55;
+}
+
+/* ---------------- Form Sections & Grid ---------------- */
+.org-form-section-title {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+  margin: 28px 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.org-form-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-hairline);
+}
+
+.org-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.org-form-full {
+  grid-column: 1 / -1;
+}
+
+.org-form-group {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.org-form-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 7px;
+  display: block;
+}
+
+.org-form-input-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 50px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface);
+  box-sizing: border-box;
+  transition: border-color 0.25s ease-out, box-shadow 0.25s ease-out;
+}
+
+.org-form-input-box:focus-within {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px var(--accent-cyan-soft);
+}
+
+.org-form-input-icon {
+  font-size: 18px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.org-form-input-box input,
+.org-form-input-box select {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  color: var(--text-primary);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.org-form-input-box input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.org-form-textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface);
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  color: var(--text-primary);
+  outline: none;
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color 0.25s ease-out, box-shadow 0.25s ease-out;
+}
+
+.org-form-textarea:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px var(--accent-cyan-soft);
+}
+
+.org-form-textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.org-password-toggle {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  transition: color 0.2s ease-out;
+  flex-shrink: 0;
+}
+
+.org-password-toggle:hover {
+  color: var(--accent-cyan);
+}
+
+/* ---------------- Form Action Button ---------------- */
+.org-form-action {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 32px;
+  width: 100%;
+}
+
+.org-submit-btn {
+  width: 220px;
+  height: 52px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(120deg, var(--accent-cyan), #7ce9f5);
+  color: #06171d;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px -6px var(--accent-cyan-soft);
+  transition: all 0.3s ease-out;
+}
+
+.org-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px -8px var(--accent-cyan-soft), 0 0 20px -2px var(--accent-cyan);
+}
+
+.org-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ---------------- Responsive Rules ---------------- */
+@media (max-width: 900px) {
+  .org-reg-card {
+    padding: 32px 24px;
+    border-radius: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .org-form-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .org-form-action {
+    justify-content: stretch;
+  }
+  .org-submit-btn {
+    width: 100%;
+  }
+  .org-reg-title {
+    font-size: 24px;
+  }
+}
