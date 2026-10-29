@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   PiCircuitry,
   PiLayout,
@@ -11,6 +12,8 @@ import {
   PiSignOut,
   PiX,
 } from 'react-icons/pi';
+import logo from '../../assets/logo.png';
+import { getProfilePhotoUrl } from '../../services/api';
 
 export default function GuideSidebar({
   activeTab,
@@ -20,7 +23,14 @@ export default function GuideSidebar({
   isOpen,
   onClose,
   unreadCount = 4,
+  onOpenEditProfile,
 }) {
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [user?.profile_photo]);
+
   const navItems = [
     { id: 'overview', label: 'Dashboard', icon: <PiLayout /> },
     { id: 'teams', label: 'My Teams', icon: <PiUsersThree /> },
@@ -43,7 +53,7 @@ export default function GuideSidebar({
     <aside className={`gd-sidebar ${isOpen ? 'gd-sidebar--open' : ''}`}>
       <div className="gd-sidebar__head">
         <div className="gd-sidebar__logo-mark">
-          <PiCircuitry />
+          <img src={logo} alt="PRMES Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
         </div>
         <div className="gd-sidebar__brand-text">
           <span className="gd-sidebar__brand-title">PRMES</span>
@@ -76,12 +86,26 @@ export default function GuideSidebar({
       </nav>
 
       <div className="gd-sidebar__footer">
-        <div className="gd-user-mini">
-          <div className="gd-avatar">
-            {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'G'}
+        <div
+          className="gd-user-mini"
+          style={{ cursor: 'pointer' }}
+          onClick={onOpenEditProfile}
+          title="Click to edit profile"
+        >
+          <div className="gd-avatar" style={{ overflow: 'hidden' }}>
+            {user?.profile_photo && !imgError ? (
+              <img
+                src={getProfilePhotoUrl(user.profile_photo)}
+                alt={user.full_name || 'Profile'}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'G'
+            )}
           </div>
           <div className="gd-user-mini__info">
-            <span className="gd-user-mini__name">{user?.full_name || 'Dr. Faculty Name'}</span>
+            <span className="gd-user-mini__name">{user?.full_name || 'Faculty Guide'}</span>
             <span className="gd-user-mini__desig">{user?.designation || 'Assistant Professor'}</span>
           </div>
         </div>

@@ -1,96 +1,19 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { PiUsersThree, PiMagnifyingGlass, PiEyeBold, PiTag, PiCalendarBlank, PiChartLineUp } from 'react-icons/pi';
+import { PiUsersThree, PiMagnifyingGlass, PiEyeBold, PiTag, PiCalendarBlank } from 'react-icons/pi';
 
-export default function AssignedTeams({ teams, onSelectTeam }) {
+export default function AssignedTeams({ teams = [], onSelectTeam }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
 
-  const DEFAULT_TEAMS = [
-    {
-      id: '014',
-      team_id: 'PRMES-TEAM-2026-014',
-      title: 'AI-Based Student Performance Prediction',
-      domain: 'Artificial Intelligence & Machine Learning',
-      leader: 'Rahul Sharma',
-      membersCount: 4,
-      stage: 'Review 1',
-      progress: 42,
-      deadline: '12 Sept 2026',
-      status: 'On Track',
-      members: [
-        { name: 'Rahul Sharma', usn: '3GN22CS045', role: 'Leader' },
-        { name: 'Priya Singh', usn: '3GN22CS048', role: 'Member' },
-        { name: 'Amit Kumar', usn: '3GN22CS052', role: 'Member' },
-        { name: 'Sneha Patel', usn: '3GN22CS061', role: 'Member' },
-      ],
-      synopsis: { status: 'Approved', date: '10 Aug 2026' }
-    },
-    {
-      id: '021',
-      team_id: 'PRMES-TEAM-2026-021',
-      title: 'Blockchain-Based Electronic Health Record System',
-      domain: 'Cyber Security',
-      leader: 'Ananya Verma',
-      membersCount: 3,
-      stage: 'Domain Selection',
-      progress: 25,
-      deadline: '18 Sept 2026',
-      status: 'Needs Attention',
-      members: [
-        { name: 'Ananya Verma', usn: '3GN22CS012', role: 'Leader' },
-        { name: 'Karan Mehta', usn: '3GN22CS019', role: 'Member' },
-        { name: 'Rohan Gupta', usn: '3GN22CS025', role: 'Member' },
-      ],
-      synopsis: { status: 'Pending Review', date: '08 Sept 2026' }
-    },
-    {
-      id: '009',
-      team_id: 'PRMES-TEAM-2026-009',
-      title: 'Smart Agriculture System using IoT Sensors',
-      domain: 'IoT',
-      leader: 'Vikram Das',
-      membersCount: 4,
-      stage: 'Development',
-      progress: 55,
-      deadline: '20 Sept 2026',
-      status: 'On Track',
-      members: [
-        { name: 'Vikram Das', usn: '3GN22CS088', role: 'Leader' },
-        { name: 'Divya Nair', usn: '3GN22CS091', role: 'Member' },
-        { name: 'Arjun Rao', usn: '3GN22CS095', role: 'Member' },
-        { name: 'Pooja Hegde', usn: '3GN22CS099', role: 'Member' },
-      ],
-      synopsis: { status: 'Approved', date: '01 Aug 2026' }
-    },
-    {
-      id: '033',
-      team_id: 'PRMES-TEAM-2026-033',
-      title: 'Cloud-Native Microservices E-Commerce Portal',
-      domain: 'Cloud Computing',
-      leader: 'Manish Pandey',
-      membersCount: 3,
-      stage: 'Review 1 Document',
-      progress: 18,
-      deadline: '05 Sept 2026',
-      status: 'At Risk',
-      members: [
-        { name: 'Manish Pandey', usn: '3GN22CS102', role: 'Leader' },
-        { name: 'Kavya Joshi', usn: '3GN22CS108', role: 'Member' },
-        { name: 'Siddharth Roy', usn: '3GN22CS115', role: 'Member' },
-      ],
-      synopsis: { status: 'Changes Requested', date: '02 Sept 2026' }
-    }
-  ];
-
-  const teamList = teams && teams.length > 0 ? teams : DEFAULT_TEAMS;
+  const teamList = Array.isArray(teams) ? teams : [];
 
   // Filter and Search logic
   const filteredTeams = teamList.filter((team) => {
     const matchesSearch =
-      team.team_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      team.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      team.leader.toLowerCase().includes(searchTerm.toLowerCase());
+      (team.team_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (team.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (team.leader || '').toLowerCase().includes(searchTerm.toLowerCase());
 
     if (activeFilter === 'All') return matchesSearch;
     return matchesSearch && team.status === activeFilter;
@@ -194,7 +117,7 @@ export default function AssignedTeams({ teams, onSelectTeam }) {
                 </div>
                 <div>
                   <div className="gd-meta-label">Members</div>
-                  <div className="gd-meta-val">{team.membersCount} Students</div>
+                  <div className="gd-meta-val">{team.membersCount || 0} Students</div>
                 </div>
                 <div>
                   <div className="gd-meta-label">Current Stage</div>
@@ -202,18 +125,18 @@ export default function AssignedTeams({ teams, onSelectTeam }) {
                 </div>
                 <div>
                   <div className="gd-meta-label">Progress</div>
-                  <div className="gd-meta-val">{team.progress}%</div>
+                  <div className="gd-meta-val">{team.progress || 0}%</div>
                 </div>
               </div>
 
               {/* Progress bar line */}
               <div style={{ width: '100%', height: 4, background: 'var(--border-hairline)', borderRadius: 999, overflow: 'hidden' }}>
-                <div style={{ width: `${team.progress}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent-cyan), #7ce9f5)' }} />
+                <div style={{ width: `${team.progress || 0}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent-cyan), #7ce9f5)' }} />
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <PiCalendarBlank /> Next: {team.deadline}
+                  <PiCalendarBlank /> Next: {team.deadline || 'Upcoming Stage'}
                 </span>
 
                 <motion.button

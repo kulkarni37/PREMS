@@ -1,22 +1,7 @@
 import { PiWarningCircle, PiCheckCircle, PiEyeBold } from 'react-icons/pi';
 
-export default function AtRiskProjectsCard({ atRiskTeams, onSelectTeam }) {
-  const DEFAULT_AT_RISK = [
-    {
-      teamId: 'PRMES-TEAM-2026-021',
-      title: 'Blockchain-Based Electronic Health Record System',
-      issue: 'Review 1 Synopsis document not submitted by deadline.',
-      status: 'Needs Attention'
-    },
-    {
-      teamId: 'PRMES-TEAM-2026-033',
-      title: 'Cloud-Native Microservices E-Commerce Portal',
-      issue: 'Review 1 presentation file rejected by guide. Pending revision.',
-      status: 'At Risk'
-    }
-  ];
-
-  const list = atRiskTeams && atRiskTeams.length > 0 ? atRiskTeams : DEFAULT_AT_RISK;
+export default function AtRiskProjectsCard({ atRiskTeams = [], onSelectTeam }) {
+  const list = Array.isArray(atRiskTeams) ? atRiskTeams : [];
 
   if (list.length === 0) {
     return (

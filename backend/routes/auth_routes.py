@@ -1,24 +1,46 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
+import os
 from database.db import db
 from models.user import User
 from models.institution import Institution
 from models.department import Department
+from models.guide_specialization import GuideSpecialization
+from models.user_role import UserRole
 from services.otp_service import OTPService
 from services.email_service import EmailService
 
+from constants.domains import FIXED_PROJECT_DOMAINS
+
 auth_bp = Blueprint('auth', __name__, url_prefix='/api')
+
+AVAILABLE_DOMAINS = FIXED_PROJECT_DOMAINS
+
+@auth_bp.route('/domains', methods=['GET'])
+def get_domains():
+    """
+    GET /api/domains
+    Public endpoint returning 15 fixed predefined project domains.
+    """
+    return jsonify({
+        'success': True,
+        'domains': FIXED_PROJECT_DOMAINS
+    }), 200
 
 @auth_bp.route('/system/organization-status', methods=['GET'])
 def get_organization_status():
     """
     GET /api/system/organization-status
-    Checks whether at least one ACTIVE organization/institution exists in MySQL database.
+    PRMES is a single-college application for Guru Nanak Dev Engineering College, Bidar (GNDEC).
     """
-    count = Institution.query.filter_by(status='Active').count()
+    count = 1
+    try:
+        count = Institution.query.filter_by(status='Active').count()
+    except Exception:
+        count = 1
     return jsonify({
         'success': True,
-        'organization_exists': count > 0,
-        'count': count
+        'organization_exists': True,
+        'count': max(1, count)
     }), 200
 
 @auth_bp.route('/institutions', methods=['GET'])
@@ -161,17 +183,23 @@ def register_organization():
 def register():
     """
     POST /api/auth/register
-    Public registration endpoint. Allows TEAM_LEADER or STUDENT registration.
-    Dynamically maps institution_id and department_id from database.
-    Rejects ADMIN public registration.
+    Public self-registration endpoint for COORDINATOR, GUIDE, TEAM_LEADER, or STUDENT.
+    Rejects ADMIN registration attempt with HTTP 403 Forbidden.
+    Requires valid Guide Secret Code when role == GUIDE.
     """
     data = request.get_json() or {}
     role = data.get('role', 'STUDENT').strip().upper()
-    full_name = data.get('fullName', '').strip()
-    usn = data.get('usn', '').strip().upper()
+    full_name = (data.get('fullName') or data.get('full_name') or '').strip()
+    
+    # ID can come as usn, employee_id, or student_id
+    id_val = (data.get('usn') or data.get('employee_id') or data.get('employeeId') or data.get('student_id') or '').strip().upper()
     email = data.get('email', '').strip().lower()
     phone = data.get('phone', '').strip()
     password = data.get('password', '')
+
+    designation = (data.get('designation') or '').strip()
+    specialization = (data.get('specialization') or '').strip()
+    guide_secret_code = (data.get('guide_secret_code') or data.get('guideSecretCode') or '').strip()
 
     inst_id_req = data.get('institution_id') or data.get('institutionId')
     dept_id_req = data.get('department_id') or data.get('departmentId')
@@ -181,24 +209,117 @@ def register():
     semester = data.get('semester', '7th Semester')
     section = data.get('section', 'A')
 
-    if role in ['ADMIN', 'COORDINATOR', 'GUIDE']:
+    # Security check: ADMIN accounts can NEVER be created via public registration
+    if role == 'ADMIN':
         return jsonify({
             'success': False,
-            'message': 'Security Notice: Admin, Coordinator, and Guide accounts cannot be created via public registration. Contact Organization Administrator.'
+            'message': 'Security Notice: Administrator accounts cannot be created via public registration. Contact System Administrator.'
         }), 403
 
-    if role not in ['TEAM_LEADER', 'STUDENT']:
+    # Allowed public self-registration roles
+    if role not in ['COORDINATOR', 'GUIDE', 'TEAM_LEADER', 'STUDENT']:
         role = 'STUDENT'
 
-    if not full_name or not usn or not email or not password:
-        return jsonify({'success': False, 'message': 'Full Name, USN, Email, and Password are required.'}), 400
+    # Coordinator Secret Code Verification for COORDINATOR role ONLY
+    if role == 'COORDINATOR':
+        coordinator_secret_code = (
+            data.get('coordinator_secret_code') or 
+            data.get('coordinatorSecretCode') or 
+            data.get('secret_code') or 
+            data.get('secretCode') or 
+            ''
+        ).strip()
 
-    if User.query.filter((User.email == email) | (User.usn == usn)).first():
-        return jsonify({'success': False, 'message': 'An account with this Email or USN already exists.'}), 400
+        if not coordinator_secret_code:
+            return jsonify({
+                'success': False,
+                'message': 'Coordinator Secret Code is required for Coordinator registration.'
+            }), 400
 
-    prefix = "PRMES-TL-2026" if role == 'TEAM_LEADER' else "PRMES-STU-2026"
+        expected_coord_code = current_app.config.get('COORDINATOR_REGISTRATION_CODE') or os.getenv('COORDINATOR_REGISTRATION_CODE', 'PRMES_COORDINATOR_SECRET_2026')
+        if coordinator_secret_code != expected_coord_code:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid Coordinator Secret Code'
+            }), 403
+
+    # Guide Secret Code & 3-Level Specialization Preferences Verification for GUIDE role ONLY
+    if role == 'GUIDE':
+        if not guide_secret_code:
+            return jsonify({
+                'success': False,
+                'message': 'Guide Secret Code is required for Faculty Guide registration.'
+            }), 400
+
+        expected_code = current_app.config.get('GUIDE_REGISTRATION_CODE') or os.getenv('GUIDE_REGISTRATION_CODE', 'PRMES_GUIDE_SECRET_2026')
+        if guide_secret_code != expected_code:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid guide registration code.'
+            }), 403
+
+        # Extract 3-level preferences
+        pref1 = (data.get('preference_1') or data.get('preference1') or '').strip()
+        pref2 = (data.get('preference_2') or data.get('preference2') or '').strip()
+        pref3 = (data.get('preference_3') or data.get('preference3') or '').strip()
+
+        if not pref1 or not pref2 or not pref3:
+            prefs_arr = data.get('specialization_preferences') or data.get('specializationPreferences') or []
+            if isinstance(prefs_arr, list) and len(prefs_arr) >= 3:
+                pref1 = str(prefs_arr[0]).strip()
+                pref2 = str(prefs_arr[1]).strip()
+                pref3 = str(prefs_arr[2]).strip()
+
+        if not pref1 or not pref2 or not pref3:
+            return jsonify({
+                'success': False,
+                'message': 'Please select all three specialization preferences.'
+            }), 400
+
+        if len({pref1, pref2, pref3}) < 3:
+            return jsonify({
+                'success': False,
+                'message': 'Please select three different specialization preferences.'
+            }), 400
+
+        for p in [pref1, pref2, pref3]:
+            if p not in AVAILABLE_DOMAINS:
+                return jsonify({
+                    'success': False,
+                    'message': f'Invalid specialization preference selected: {p}.'
+                }), 400
+
+    if not full_name or not id_val or not email or not password:
+        id_label = "USN / Student ID" if role in ['STUDENT', 'TEAM_LEADER'] else "Faculty / Employee ID"
+        return jsonify({'success': False, 'message': f'Full Name, {id_label}, Email, and Password are required.'}), 400
+
+    # Duplicate check on email, usn, or student_id
+    existing_user = User.query.filter(
+        (User.email == email) | 
+        (User.usn == id_val) | 
+        (User.student_id == id_val)
+    ).first()
+    
+    if existing_user:
+        return jsonify({'success': False, 'message': 'An account with this Email, USN, or Employee ID already exists.'}), 400
+
+    # Role-based prefix and default attributes
+    if role == 'GUIDE':
+        prefix = "PRMES-GDE-2026"
+        default_desig = designation or "Assistant Professor"
+    elif role == 'COORDINATOR':
+        prefix = "PRMES-CRD-2026"
+        default_desig = designation or "Project Coordinator"
+    elif role == 'TEAM_LEADER':
+        prefix = "PRMES-TL-2026"
+        default_desig = "Student Team Leader"
+    else:
+        prefix = "PRMES-STU-2026"
+        default_desig = "Student"
+
     count = User.query.filter_by(role=role).count() + 1
-    student_id = f"{prefix}-{count:04d}"
+    generated_id = f"{prefix}-{count:04d}"
+    student_id_to_store = id_val if id_val else generated_id
 
     # Resolve Institution dynamically
     inst = None
@@ -211,37 +332,66 @@ def register():
     dept = None
     if dept_id_req:
         dept = Department.query.get(dept_id_req)
-    if not dept and inst:
-        dept = Department.query.filter_by(institution_id=inst.id, status='Active').first()
+
+    if not dept:
+        dept = Department.query.first()
+
+    if not dept:
+        return jsonify({
+            'success': False,
+            'message': 'Registration Error: Selected department was not found.'
+        }), 400
 
     user = User(
         role=role,
-        student_id=student_id,
+        student_id=student_id_to_store,
         full_name=full_name,
-        usn=usn,
+        usn=id_val if role in ['STUDENT', 'TEAM_LEADER'] else None,
         email=email,
         phone=phone,
         institution_id=inst.id if inst else None,
-        department_id=dept.id if dept else None,
-        college=inst.institution_name if inst else (college or 'PRMES Partner Institution'),
+        department_id=dept.id,
+        college=inst.institution_name if inst else (college or 'Guru Nanak Dev Engineering College, Bidar'),
         department=dept.department_name if dept else (department or 'Computer Science & Engineering'),
-        semester=semester,
-        section=section
+        semester=semester if role in ['STUDENT', 'TEAM_LEADER'] else None,
+        section=section if role in ['STUDENT', 'TEAM_LEADER'] else None,
+        designation=default_desig,
+        specialization=pref1 if role == 'GUIDE' else (specialization if role == 'COORDINATOR' else None),
+        status='Active'
     )
     user.set_password(password)
     db.session.add(user)
+    db.session.flush()
+
+    # Record primary role in user_roles
+    if not UserRole.query.filter_by(user_id=user.id, role=role).first():
+        db.session.add(UserRole(user_id=user.id, role=role))
+
+    if role == 'GUIDE':
+        spec1 = GuideSpecialization(guide_id=user.id, domain_name=pref1, preference_order=1)
+        spec2 = GuideSpecialization(guide_id=user.id, domain_name=pref2, preference_order=2)
+        spec3 = GuideSpecialization(guide_id=user.id, domain_name=pref3, preference_order=3)
+        db.session.add_all([spec1, spec2, spec3])
+
     db.session.commit()
 
-    EmailService.send_welcome_email(email, full_name, student_id, role=role)
+    user_dict = user.to_dict()
 
-    role_message = "Your Team Leader account has been created successfully." if role == 'TEAM_LEADER' else "Your student account has been created successfully."
+    EmailService.send_welcome_email(email, full_name, student_id_to_store, role=role)
+
+    role_messages = {
+        'COORDINATOR': "Your Coordinator account has been created successfully.",
+        'GUIDE': "Your Faculty Guide account has been created successfully.",
+        'TEAM_LEADER': "Your Team Leader account has been created successfully.",
+        'STUDENT': "Your Student account has been created successfully."
+    }
 
     return jsonify({
         'success': True,
-        'message': role_message,
+        'message': role_messages.get(role, "Account created successfully."),
         'role': role,
-        'student_id': student_id,
-        'user': user.to_dict()
+        'student_id': student_id_to_store,
+        'user': user_dict
     }), 201
 
 @auth_bp.route('/auth/login', methods=['POST'])
@@ -336,4 +486,258 @@ def reset_password():
     db.session.commit()
     OTPService.delete_otps_for_user(student_id, email)
 
-    return jsonify({'success': True, 'message': 'Password has been updated successfully! You can now log in.'}), 200
+    return jsonify({'success': True, 'message': 'Password reset successful. You can now log in.'}), 200
+
+@auth_bp.route('/admin/users/<int:user_id>/roles', methods=['POST', 'PATCH'])
+def update_user_roles(user_id):
+    """
+    POST /api/admin/users/<id>/roles
+    Assigns or updates additional responsibilities for a user account without creating duplicate users.
+    Payload: { "roles": ["COORDINATOR", "GUIDE"], "email": "admin@gndec.edu.in" }
+    """
+    from models.user import VALID_ROLES
+    data = request.get_json() or {}
+    email = data.get('email', '').strip()
+
+    admin_user = User.query.filter_by(email=email).first() if email else None
+    if not admin_user or not admin_user.has_role('ADMIN'):
+        return jsonify({'success': False, 'message': 'Unauthorized: Administrator access required.'}), 403
+
+    u = User.query.get(user_id)
+    if not u:
+        return jsonify({'success': False, 'message': 'User record not found.'}), 404
+
+    new_roles = data.get('roles') or []
+    if isinstance(new_roles, str):
+        new_roles = [new_roles]
+
+    roles_to_add = [r.strip().upper() for r in new_roles if r.strip().upper() in VALID_ROLES]
+
+    # Ensure primary role remains
+    if u.role not in roles_to_add:
+        roles_to_add.append(u.role)
+
+    # Sync UserRole entries
+    UserRole.query.filter_by(user_id=u.id).delete(synchronize_session=False)
+    for r in roles_to_add:
+        db.session.add(UserRole(user_id=u.id, role=r))
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': f"Responsibilities for {u.full_name} updated successfully.",
+        'user_id': u.id,
+        'roles': u.get_roles()
+    }), 200
+
+@auth_bp.route('/profile', methods=['GET'])
+def get_user_profile():
+    """
+    GET /api/profile
+    Retrieves the authenticated user's profile.
+    Query params: email or identifier (usn / student_id)
+    """
+    email = request.args.get('email', '').strip().lower()
+    student_id = request.args.get('student_id', '').strip().upper()
+    usn = request.args.get('usn', '').strip().upper()
+
+    user = None
+    if email:
+        user = User.query.filter(User.email.ilike(email)).first()
+    elif student_id:
+        user = User.query.filter_by(student_id=student_id).first()
+    elif usn:
+        user = User.query.filter_by(usn=usn).first()
+
+    if not user:
+        return jsonify({'success': False, 'message': 'User profile not found.'}), 404
+
+    return jsonify({
+        'success': True,
+        'user': user.to_dict()
+    }), 200
+
+@auth_bp.route('/profile', methods=['PUT'])
+def update_user_profile():
+    """
+    PUT /api/profile
+    Updates the authenticated user's own profile (full_name, phone, password, profile_photo).
+    Does NOT allow changing role, department_id, email, usn, or id.
+    """
+    data = request.get_json() or {}
+    requester_email = (data.get('requester_email') or data.get('auth_email') or '').strip().lower()
+    requester_id = data.get('requester_id')
+    email = (data.get('email') or '').strip().lower()
+    student_id = (data.get('student_id') or '').strip().upper()
+
+    user = None
+    if email:
+        user = User.query.filter(User.email.ilike(email)).first()
+    elif student_id:
+        user = User.query.filter_by(student_id=student_id).first()
+
+    if not user:
+        return jsonify({'success': False, 'message': 'Authenticated user record not found.'}), 404
+
+    # Security Check: Ensure caller cannot modify another user's profile unless ADMIN
+    if requester_email and requester_email != user.email.lower():
+        req_user = User.query.filter(User.email.ilike(requester_email)).first()
+        if not req_user or req_user.role != 'ADMIN':
+            return jsonify({'success': False, 'message': "You are not authorized to modify another user's profile."}), 403
+
+    if requester_id and int(requester_id) != user.id:
+        req_user = User.query.get(requester_id)
+        if not req_user or req_user.role != 'ADMIN':
+            return jsonify({'success': False, 'message': "You are not authorized to modify another user's profile."}), 403
+
+    # 1. Full Name Update
+    full_name = data.get('full_name') or data.get('fullName')
+    if full_name and str(full_name).strip():
+        user.full_name = str(full_name).strip()
+
+    # 2. Phone / Mobile Number Update (Must be 10-digit Indian mobile number)
+    phone = data.get('phone') or data.get('mobileNumber')
+    if phone is not None and str(phone).strip():
+        clean_phone = str(phone).strip()
+        if clean_phone.startswith('+91'):
+            clean_phone = clean_phone[3:].strip()
+        elif clean_phone.startswith('91') and len(clean_phone) == 12:
+            clean_phone = clean_phone[2:].strip()
+
+        if not clean_phone.isdigit() or len(clean_phone) != 10:
+            return jsonify({
+                'success': False,
+                'message': 'Please enter a valid 10-digit Indian mobile number.'
+            }), 400
+        user.phone = clean_phone
+
+    # 3. Password Update (Secure Check & Update)
+    current_password = data.get('current_password') or data.get('currentPassword')
+    new_password = data.get('new_password') or data.get('newPassword')
+    confirm_password = data.get('confirm_password') or data.get('confirmPassword')
+
+    if new_password or current_password or confirm_password:
+        if not current_password:
+            return jsonify({
+                'success': False,
+                'message': 'Please enter your current password to change password.'
+            }), 400
+
+        if not user.check_password(current_password):
+            return jsonify({
+                'success': False,
+                'message': 'Current password is incorrect.'
+            }), 400
+
+        if not new_password:
+            return jsonify({
+                'success': False,
+                'message': 'Please enter your new password.'
+            }), 400
+
+        if new_password != confirm_password:
+            return jsonify({
+                'success': False,
+                'message': 'New password and confirmation password do not match.'
+            }), 400
+
+        if len(new_password) < 6:
+            return jsonify({
+                'success': False,
+                'message': 'New password must be at least 6 characters long.'
+            }), 400
+
+        user.set_password(new_password)
+
+    # 4. Profile Photo Base64 / Path Update
+    photo_data = data.get('profile_photo') or data.get('profilePhoto')
+    if photo_data and str(photo_data).startswith('data:image'):
+        import base64
+        import time
+        try:
+            format_part, img_str = photo_data.split(';base64,')
+            ext = format_part.split('/')[-1]
+            if ext == 'jpeg':
+                ext = 'jpg'
+            filename = f"avatar_{user.id}_{int(time.time())}.{ext}"
+            uploads_dir = os.path.join(current_app.root_path, 'uploads', 'avatars')
+            os.makedirs(uploads_dir, exist_ok=True)
+            filepath = os.path.join(uploads_dir, filename)
+            with open(filepath, 'wb') as f:
+                f.write(base64.b64decode(img_str))
+            user.profile_photo = f"/uploads/avatars/{filename}"
+        except Exception as e:
+            print("Failed to save base64 profile photo:", e)
+    elif photo_data and isinstance(photo_data, str) and photo_data.startswith('/uploads/'):
+        user.profile_photo = photo_data
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Profile updated successfully.',
+        'user': user.to_dict()
+    }), 200
+
+@auth_bp.route('/profile/photo', methods=['POST'])
+def upload_profile_photo():
+    """
+    POST /api/profile/photo
+    Multipart photo upload endpoint for authenticated user profile.
+    """
+    import time
+    from werkzeug.utils import secure_filename
+
+    email = request.form.get('email', '').strip().lower()
+    student_id = request.form.get('student_id', '').strip().upper()
+    requester_email = (request.form.get('requester_email') or request.form.get('auth_email') or '').strip().lower()
+    requester_id = request.form.get('requester_id')
+
+    user = None
+    if email:
+        user = User.query.filter(User.email.ilike(email)).first()
+    elif student_id:
+        user = User.query.filter_by(student_id=student_id).first()
+
+    if not user:
+        return jsonify({'success': False, 'message': 'Authenticated user record not found.'}), 404
+
+    # Security Check: Ensure caller cannot upload photo for another user's profile unless ADMIN
+    if requester_email and requester_email != user.email.lower():
+        req_user = User.query.filter(User.email.ilike(requester_email)).first()
+        if not req_user or req_user.role != 'ADMIN':
+            return jsonify({'success': False, 'message': "You are not authorized to modify another user's profile photo."}), 403
+
+    if requester_id and int(requester_id) != user.id:
+        req_user = User.query.get(requester_id)
+        if not req_user or req_user.role != 'ADMIN':
+            return jsonify({'success': False, 'message': "You are not authorized to modify another user's profile photo."}), 403
+
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'message': 'No file uploaded.'}), 400
+
+    file = request.files['file']
+    if not file or file.filename == '':
+        return jsonify({'success': False, 'message': 'No file selected.'}), 400
+
+    filename = secure_filename(file.filename)
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+    if ext not in ['jpg', 'jpeg', 'png', 'webp']:
+        return jsonify({'success': False, 'message': 'Unsupported image format. Allowed formats: JPG, JPEG, PNG, WEBP.'}), 400
+
+    new_filename = f"avatar_{user.id}_{int(time.time())}.{ext}"
+    uploads_dir = os.path.join(current_app.root_path, 'uploads', 'avatars')
+    os.makedirs(uploads_dir, exist_ok=True)
+    filepath = os.path.join(uploads_dir, new_filename)
+    file.save(filepath)
+
+    user.profile_photo = f"/uploads/avatars/{new_filename}"
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Profile photo uploaded successfully.',
+        'profile_photo': user.profile_photo,
+        'user': user.to_dict()
+    }), 200

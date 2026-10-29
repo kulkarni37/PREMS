@@ -29,24 +29,6 @@ import {
 
 import '../../styles/coordinator-dashboard.css';
 
-/* ===================================================================
-   TEMPORARY MOCK COORDINATOR DATA FOR DEVELOPMENT PREVIEW
-   -------------------------------------------------------------------
-   NOTE: This mock object provides instant preview access at /coordinator/dashboard
-   without requiring coordinator registration/login.
-   Replace or remove this block when real coordinator authentication is connected.
-   =================================================================== */
-const DEV_MOCK_COORDINATOR_PROFILE = {
-  coordinator_id: 'PRMES-CRD-2026-001',
-  name: 'Prof. Coordinator Name',
-  full_name: 'Prof. Coordinator Name',
-  department: 'Computer Science & Engineering',
-  academic_year: '2026–27',
-  semester: '7th Semester',
-  email: 'coordinator@gndec.edu.in',
-  role: 'coordinator'
-};
-
 export default function CoordinatorDashboard() {
   const navigate = useNavigate();
 
@@ -56,40 +38,93 @@ export default function CoordinatorDashboard() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.role === 'coordinator' || parsed.coordinator_id) {
+        if (
+          parsed.role === 'coordinator' ||
+          parsed.role === 'COORDINATOR' ||
+          parsed.coordinator_id ||
+          (parsed.roles && parsed.roles.includes('COORDINATOR'))
+        ) {
           return parsed;
         }
       } catch (e) {
-        // Fallback to mock profile
+        // ignore parse error
       }
     }
-    // Fallback to Development Mock Data if no active coordinator session
-    return DEV_MOCK_COORDINATOR_PROFILE;
+    return null;
   });
 
   // 2. Dashboard UI States
   const [activeTab, setActiveTab] = useState('overview');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // 3. Data States
-  const [teams, setTeams] = useState(null);
-  const [guides, setGuides] = useState(null);
-  const [documents, setDocuments] = useState(null);
+  // 3. Database-Driven States
+  const [stats, setStats] = useState(null);
+  const [batchProgress, setBatchProgress] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [guides, setGuides] = useState([]);
+  const [guideMetrics, setGuideMetrics] = useState(null);
+  const [documents, setDocuments] = useState([]);
+  const [documentMetrics, setDocumentMetrics] = useState(null);
+  const [stageEvaluations, setStageEvaluations] = useState([]);
+  const [totalMarksEntered, setTotalMarksEntered] = useState(0);
+  const [domainDistribution, setDomainDistribution] = useState([]);
+  const [atRiskProjects, setAtRiskProjects] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [activityTimeline, setActivityTimeline] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [calendarEvents, setCalendarEvents] = useState([]);
 
   // 4. Modal States
   const [selectedTeam, setSelectedTeam] = useState(null);
 
-  // Attempt backend API loading on mount
-  useEffect(() => {
-    const loadCoordinatorData = async () => {
+  // Load real coordinator data from MySQL backend
+  const loadCoordinatorData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
       const dbData = await fetchCoordinatorDashboard();
-      if (dbData) {
+      if (dbData && dbData.success) {
         if (dbData.user) setUser(dbData.user);
-        if (dbData.teams) setTeams(dbData.teams);
-        if (dbData.guides) setGuides(dbData.guides);
-        if (dbData.documents) setDocuments(dbData.documents);
+        setStats(
+          dbData.stats || {
+            totalTeams: 0,
+            activeProjects: 0,
+            guides: 0,
+            pendingAllocations: 0,
+            upcomingReviews: 0,
+            pendingEvaluations: 0,
+          }
+        );
+        setBatchProgress(dbData.batchProgress || []);
+        setTeams(dbData.teams || []);
+        setGuides(dbData.guides || []);
+        setGuideMetrics(dbData.guideMetrics || null);
+        setDocuments(dbData.documents || []);
+        setDocumentMetrics(dbData.documentMetrics || null);
+        setStageEvaluations(dbData.stageEvaluations || []);
+        setTotalMarksEntered(dbData.totalMarksEntered || 0);
+        setDomainDistribution(dbData.domainDistribution || []);
+        setAtRiskProjects(dbData.atRiskProjects || []);
+        setNotifications(dbData.notifications || []);
+        setUnreadCount(dbData.unreadNotificationsCount ?? 0);
+        setActivityTimeline(dbData.activityTimeline || []);
+        setReviews(dbData.reviews || []);
+        setCalendarEvents(dbData.calendarEvents || []);
+      } else {
+        setError('Unable to load dashboard statistics.');
       }
-    };
+    } catch (err) {
+      console.error('Failed to load coordinator dashboard data:', err);
+      setError(err?.message || 'Unable to load dashboard statistics.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadCoordinatorData();
   }, []);
 
@@ -97,6 +132,104 @@ export default function CoordinatorDashboard() {
     localStorage.removeItem('prmes_user');
     navigate('/login');
   };
+
+  // Loading Screen
+  if (loading) {
+    return (
+      <div
+        className="cd-layout"
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--bg-canvas)',
+        }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div
+            style={{
+              width: 42,
+              height: 42,
+              border: '3px solid rgba(56, 189, 248, 0.2)',
+              borderTopColor: 'var(--accent-cyan)',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+              margin: '0 auto 16px',
+            }}
+          />
+          <h2
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '20px',
+              color: 'var(--text-primary)',
+              margin: 0,
+            }}
+          >
+            Loading...
+          </h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13.5px', marginTop: '6px' }}>
+            Fetching coordinator dashboard statistics from MySQL database...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error Screen
+  if (error && !stats) {
+    return (
+      <div
+        className="cd-layout"
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--bg-canvas)',
+        }}
+      >
+        <div
+          className="cd-card"
+          style={{
+            maxWidth: '460px',
+            textAlign: 'center',
+            padding: '36px 28px',
+            borderRadius: 'var(--radius-md)',
+          }}
+        >
+          <div style={{ fontSize: '36px', marginBottom: '14px' }}>⚠️</div>
+          <h2
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '20px',
+              color: 'var(--text-primary)',
+              margin: '0 0 8px 0',
+            }}
+          >
+            Unable to load dashboard statistics.
+          </h2>
+          <p
+            style={{
+              color: 'var(--text-secondary)',
+              fontSize: '13.5px',
+              margin: '0 0 20px 0',
+              lineHeight: 1.5,
+            }}
+          >
+            {error}
+          </p>
+          <button
+            className="gd-btn gd-btn-primary"
+            onClick={loadCoordinatorData}
+            style={{ margin: '0 auto', padding: '8px 24px' }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="cd-layout">
@@ -111,7 +244,7 @@ export default function CoordinatorDashboard() {
         onLogout={handleLogout}
         isOpen={mobileSidebarOpen}
         onClose={() => setMobileSidebarOpen(false)}
-        unreadCount={5}
+        unreadCount={unreadCount}
       />
 
       {/* Main Content Workspace */}
@@ -120,7 +253,7 @@ export default function CoordinatorDashboard() {
           user={user}
           onLogout={handleLogout}
           onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-          unreadCount={5}
+          unreadCount={unreadCount}
           onOpenNotifications={() => {
             setActiveTab('notifications');
             document.getElementById('notifications')?.scrollIntoView({ behavior: 'smooth' });
@@ -138,7 +271,7 @@ export default function CoordinatorDashboard() {
             <div className="cd-welcome-card__glow" />
             <div className="cd-welcome-card__text">
               <h2 className="cd-welcome-card__title">
-                Good Evening, {user?.full_name || 'Prof. Coordinator Name'} 👋
+                Good Evening, {user?.full_name || 'Coordinator'} 👋
               </h2>
               <p className="cd-welcome-card__sub">
                 Monitor project progress, reviews, evaluations, and guide allocation across the department.
@@ -149,33 +282,28 @@ export default function CoordinatorDashboard() {
                 Academic Year: {user?.academic_year || '2026–27'}
               </span>
               <span className="sd-welcome-card__status-pill">
-                Dept: {user?.department || 'CSE'}
+                Dept: {user?.department || 'Computer Science & Engineering'}
               </span>
             </div>
           </motion.div>
 
-          {/* 6 Key Statistics Cards (Section 3) */}
-          <CoordinatorStats
-            stats={{
-              totalTeams: 48,
-              activeProjects: 42,
-              guides: 18,
-              pendingAllocations: 4,
-              upcomingReviews: 8,
-              pendingEvaluations: 6,
-            }}
-          />
+          {/* 6 Key Statistics Cards (Section 3) - 100% Database Driven */}
+          <CoordinatorStats stats={stats} />
 
-          {/* Project Progress Overview Visualization (Section 4) */}
+          {/* Project Progress Overview Visualization (Section 4) - 100% Database Driven */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
           >
-            <BatchProgressOverview />
+            <BatchProgressOverview
+              stages={batchProgress}
+              totalTeams={stats?.totalTeams ?? 0}
+              academicYear={user?.academic_year}
+            />
           </motion.div>
 
-          {/* All Project Teams Table (Section 5) */}
+          {/* All Project Teams Table (Section 5) - Real Database Teams */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -187,7 +315,7 @@ export default function CoordinatorDashboard() {
             />
           </motion.div>
 
-          {/* Guide Allocation & Workload (Section 6) */}
+          {/* Guide Allocation & Workload (Section 6) - Real Database Guides */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -195,6 +323,7 @@ export default function CoordinatorDashboard() {
           >
             <GuideAllocationTable
               guides={guides}
+              metrics={guideMetrics}
               onReviewAllocation={(g) => alert(`Reviewing allocation capacity for ${g.name}`)}
             />
           </motion.div>
@@ -207,6 +336,7 @@ export default function CoordinatorDashboard() {
               transition={{ duration: 0.5, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
             >
               <ReviewScheduleCard
+                reviews={reviews}
                 onScheduleReview={() => alert('Schedule Review modal endpoint ready.')}
               />
             </motion.div>
@@ -216,7 +346,7 @@ export default function CoordinatorDashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
             >
-              <ReviewCalendarCard />
+              <ReviewCalendarCard events={calendarEvents} />
             </motion.div>
           </div>
 
@@ -229,6 +359,7 @@ export default function CoordinatorDashboard() {
             >
               <DocumentOverview
                 documents={documents}
+                metrics={documentMetrics}
                 onSelectTeam={(t) => setSelectedTeam(t)}
               />
             </motion.div>
@@ -238,7 +369,11 @@ export default function CoordinatorDashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
             >
-              <EvaluationStatusCard />
+              <EvaluationStatusCard
+                stageEvaluations={stageEvaluations}
+                totalMarksEntered={totalMarksEntered}
+                totalTeams={stats?.totalTeams ?? 0}
+              />
             </motion.div>
           </div>
 
@@ -250,6 +385,7 @@ export default function CoordinatorDashboard() {
               transition={{ duration: 0.5, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
             >
               <AtRiskProjectsCard
+                atRiskTeams={atRiskProjects}
                 onSelectTeam={(t) => setSelectedTeam(t)}
               />
             </motion.div>
@@ -259,7 +395,7 @@ export default function CoordinatorDashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
             >
-              <DomainDistributionCard />
+              <DomainDistributionCard domains={domainDistribution} />
             </motion.div>
           </div>
 
@@ -279,7 +415,10 @@ export default function CoordinatorDashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.65, ease: [0.16, 1, 0.3, 1] }}
             >
-              <CoordinatorNotifications />
+              <CoordinatorNotifications
+                notifications={notifications}
+                onMarkAllRead={() => setUnreadCount(0)}
+              />
             </motion.div>
 
             <motion.div
@@ -287,7 +426,7 @@ export default function CoordinatorDashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
             >
-              <RecentActivityTimeline />
+              <RecentActivityTimeline activities={activityTimeline} />
             </motion.div>
           </div>
         </div>

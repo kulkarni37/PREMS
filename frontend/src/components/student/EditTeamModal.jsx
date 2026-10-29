@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { PiX, PiPencilSimple, PiLockKey, PiCheckCircle } from 'react-icons/pi';
 import { updateTeamInfo } from '../../services/api';
+import { FIXED_PROJECT_DOMAINS } from '../../constants/domains';
 
 export default function EditTeamModal({ isOpen, onClose, team, user, onTeamUpdated }) {
   const [title, setTitle] = useState('');
@@ -12,7 +13,7 @@ export default function EditTeamModal({ isOpen, onClose, team, user, onTeamUpdat
   useEffect(() => {
     if (team) {
       setTitle(team.title || '');
-      setDomain(team.domain || '');
+      setDomain(team.domain || FIXED_PROJECT_DOMAINS[0]);
     }
   }, [team]);
 
@@ -20,16 +21,7 @@ export default function EditTeamModal({ isOpen, onClose, team, user, onTeamUpdat
 
   const isDomainLocked = Boolean(team.guide_id);
 
-  const DOMAINS = [
-    'Artificial Intelligence & Machine Learning',
-    'Web Development',
-    'Data Science',
-    'Cyber Security',
-    'Cloud Computing',
-    'IoT',
-    'Mobile Application Development',
-    'Software Engineering'
-  ];
+  const DOMAINS = FIXED_PROJECT_DOMAINS;
 
   const handleSubmit = async (e) => {
     e.preventDefault();

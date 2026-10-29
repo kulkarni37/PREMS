@@ -1,0 +1,18 @@
+# Environment variables
+.env
+backend/.env
+frontend/.env
+*.env
+
+# Python build & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Frontend build & dependencies
+node_modules/
+dist/
+.vite/

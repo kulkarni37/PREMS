@@ -1,32 +1,22 @@
-import { motion } from 'framer-motion';
-import { PiChatCircleText, PiPaperPlaneRight, PiEyeBold } from 'react-icons/pi';
+import { PiChatCircleText, PiEyeBold } from 'react-icons/pi';
 
-export default function FeedbackPanel({ feedbackList, onSelectTeam }) {
-  const DEFAULT_FEEDBACK = [
-    {
-      id: 'f1',
-      teamId: 'PRMES-TEAM-2026-014',
-      date: 'Yesterday',
-      summary: 'Improve the dataset explanation and add comparison with baseline machine learning models in section 3.2.',
-      status: 'Feedback Sent'
-    },
-    {
-      id: 'f2',
-      teamId: 'PRMES-TEAM-2026-021',
-      date: '05 Sept 2026',
-      summary: 'Clarify the smart contract gas optimization algorithm and update the security threat matrix.',
-      status: 'Feedback Sent'
-    },
-    {
-      id: 'f3',
-      teamId: 'PRMES-TEAM-2026-033',
-      date: '02 Sept 2026',
-      summary: 'Review 1 slides require system deployment diagram update. Resubmit presentation file.',
-      status: 'Changes Requested'
-    }
-  ];
+export default function FeedbackPanel({ feedbackList = [], onSelectTeam }) {
+  const list = Array.isArray(feedbackList) ? feedbackList : [];
 
-  const list = feedbackList && feedbackList.length > 0 ? feedbackList : DEFAULT_FEEDBACK;
+  if (list.length === 0) {
+    return (
+      <div className="gd-card" id="feedback">
+        <div className="gd-card__head">
+          <h2 className="gd-card__title">
+            <PiChatCircleText className="gd-card__title-icon" /> Recent Feedback &amp; Mentoring
+          </h2>
+        </div>
+        <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13.5px' }}>
+          No recent feedback entries recorded yet.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="gd-card" id="feedback">

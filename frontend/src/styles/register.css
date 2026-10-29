@@ -77,6 +77,7 @@
   z-index: 1;
   width: 100%;
   max-width: 640px;
+  box-sizing: border-box;
   padding: 44px 44px 36px;
   border-radius: var(--radius-lg);
   background: var(--glass-bg);
@@ -84,6 +85,7 @@
   -webkit-backdrop-filter: blur(20px) saturate(150%);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-elevated);
+  overflow: hidden;
 }
 
 .register-card__glow {
@@ -179,15 +181,20 @@
 .register-grid {
   display: grid;
   gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .register-grid--2 {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .register-field {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .register-field label {
@@ -209,6 +216,11 @@
   border: 1px solid var(--border-hairline);
   background: var(--bg-surface);
   transition: border-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .register-input:focus-within {
@@ -234,6 +246,8 @@
 .register-input select {
   flex: 1;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
   padding: 12.5px 0;
   border: none;
   background: transparent;
@@ -241,6 +255,10 @@
   font-size: 14.5px;
   color: var(--text-primary);
   outline: none;
+  box-sizing: border-box;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .register-input select {
@@ -250,6 +268,35 @@
 .register-input select option {
   background: var(--bg-surface);
   color: var(--text-primary);
+}
+
+/* Department Status Indicator (Contained inside card) */
+.register-dept-status {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.register-dept-status--active {
+  background: rgba(45, 212, 120, 0.1);
+  border: 1px solid rgba(45, 212, 120, 0.25);
+  color: #2dd478;
+}
+
+.register-dept-status--inactive {
+  background: rgba(255, 98, 89, 0.1);
+  border: 1px solid rgba(255, 98, 89, 0.25);
+  color: #ff6259;
 }
 
 .register-input input::placeholder {

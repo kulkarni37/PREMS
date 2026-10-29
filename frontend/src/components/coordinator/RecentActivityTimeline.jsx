@@ -1,12 +1,7 @@
 import { PiClockCounterClockwise } from 'react-icons/pi';
 
-export default function RecentActivityTimeline() {
-  const activities = [
-    { text: 'Guide allocated to PRMES-TEAM-2026-014 (Dr. Faculty Guide)', time: 'Today' },
-    { text: 'Review 1 schedule published for Batch A & B', time: 'Today' },
-    { text: 'PRMES-TEAM-2026-021 submitted project synopsis', time: 'Yesterday' },
-    { text: 'Evaluation completed for PRMES-TEAM-2026-009 (Score: 44/50)', time: 'Yesterday' },
-  ];
+export default function RecentActivityTimeline({ activities = [] }) {
+  const list = Array.isArray(activities) ? activities : [];
 
   return (
     <div className="cd-card">
@@ -16,31 +11,43 @@ export default function RecentActivityTimeline() {
         </h2>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', position: 'relative', paddingLeft: '8px' }}>
-        {activities.map((act, idx) => (
-          <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', position: 'relative' }}>
-            <div
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                background: idx === 0 ? 'var(--accent-cyan)' : 'var(--border-hairline-strong)',
-                boxShadow: idx === 0 ? '0 0 10px var(--accent-cyan)' : 'none',
-                marginTop: 5,
-                flexShrink: 0
-              }}
-            />
-            <div>
-              <div style={{ fontSize: '13.5px', color: 'var(--text-primary)', fontWeight: 500 }}>
-                {act.text}
-              </div>
-              <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                {act.time}
+      {list.length === 0 ? (
+        <div className="gd-empty-state">
+          <div className="gd-empty-state__icon"><PiClockCounterClockwise /></div>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 600, margin: 0 }}>
+            No recent department activity recorded.
+          </h3>
+          <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+            Activity logs will appear as teams register, submit documents, and undergo reviews.
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', position: 'relative', paddingLeft: '8px' }}>
+          {list.map((act, idx) => (
+            <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', position: 'relative' }}>
+              <div
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  background: idx === 0 ? 'var(--accent-cyan)' : 'var(--border-hairline-strong)',
+                  boxShadow: idx === 0 ? '0 0 10px var(--accent-cyan)' : 'none',
+                  marginTop: 5,
+                  flexShrink: 0
+                }}
+              />
+              <div>
+                <div style={{ fontSize: '13.5px', color: 'var(--text-primary)', fontWeight: 500 }}>
+                  {act.text}
+                </div>
+                <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  {act.time}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

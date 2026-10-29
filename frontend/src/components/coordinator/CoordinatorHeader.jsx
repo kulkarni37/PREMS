@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { PiBell, PiList } from 'react-icons/pi';
 
 export default function CoordinatorHeader({
@@ -7,6 +8,9 @@ export default function CoordinatorHeader({
   unreadCount = 5,
   onOpenNotifications,
 }) {
+  const navigate = useNavigate();
+  const userRoles = (user?.roles || [user?.role || 'COORDINATOR']).map(r => r.toUpperCase());
+
   return (
     <header className="cd-header">
       <div className="cd-header__title-area">
@@ -15,6 +19,29 @@ export default function CoordinatorHeader({
       </div>
 
       <div className="cd-header__actions">
+        {/* Workspace Switcher for Multi-Role Users */}
+        {userRoles.length > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--accent-cyan-soft)', border: '1px solid var(--accent-cyan)', borderRadius: 'var(--radius-sm)', padding: '4px 10px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent-cyan)' }}>Workspace:</span>
+            <select
+              value="COORDINATOR"
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'GUIDE') navigate('/guide/dashboard');
+                else if (val === 'ADMIN') navigate('/admin/dashboard');
+                else if (val === 'STUDENT' || val === 'TEAM_LEADER') navigate('/student/dashboard');
+              }}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: 700, fontSize: '12.5px', cursor: 'pointer' }}
+            >
+              {userRoles.map(r => (
+                <option key={r} value={r} style={{ background: '#121824', color: '#fff' }}>
+                  {r === 'COORDINATOR' ? 'Coordinator' : r === 'GUIDE' ? 'Faculty Guide' : r === 'ADMIN' ? 'Admin' : 'Student'}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Coordinator Metadata Pill */}
         <div className="cd-header__pill">
           <span className="cd-header__pill-item">

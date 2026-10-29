@@ -2,38 +2,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { PiCalendarBlank, PiPlusBold, PiClock, PiUsersThree, PiEyeBold, PiPencilSimple } from 'react-icons/pi';
 
-export default function ReviewScheduleCard({ reviews, onScheduleReview }) {
-  const DEFAULT_SCHEDULES = [
-    {
-      id: 'sch1',
-      stage: 'Review 1 Evaluation',
-      date: '20 Sept 2026',
-      time: '10:00 AM',
-      teamsCount: 12,
-      panel: 'Panel A (Dr. Faculty A, Dr. Faculty B)',
-      status: 'Scheduled'
-    },
-    {
-      id: 'sch2',
-      stage: 'Review 1 Evaluation',
-      date: '22 Sept 2026',
-      time: '02:00 PM',
-      teamsCount: 10,
-      panel: 'Panel B (Dr. Faculty C, Dr. Faculty D)',
-      status: 'Scheduled'
-    },
-    {
-      id: 'sch3',
-      stage: 'Review 2 Mid-Term Defense',
-      date: '15 Oct 2026',
-      time: '09:30 AM',
-      teamsCount: 15,
-      panel: 'Panel C (Dr. Faculty E, Prof. Coordinator)',
-      status: 'Upcoming'
-    }
-  ];
-
-  const list = reviews && reviews.length > 0 ? reviews : DEFAULT_SCHEDULES;
+export default function ReviewScheduleCard({ reviews = [], onScheduleReview }) {
+  const list = Array.isArray(reviews) ? reviews : [];
 
   return (
     <div className="cd-card" id="schedule">
@@ -50,8 +20,19 @@ export default function ReviewScheduleCard({ reviews, onScheduleReview }) {
         </button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {list.map((sch) => (
+      {list.length === 0 ? (
+        <div className="gd-empty-state">
+          <div className="gd-empty-state__icon"><PiCalendarBlank /></div>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 600, margin: 0 }}>
+            No reviews scheduled yet.
+          </h3>
+          <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+            Schedule upcoming department review stages and assign evaluation panels.
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {list.map((sch) => (
           <div key={sch.id} className="gd-doc-row">
             <div>
               <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)' }}>
@@ -85,7 +66,8 @@ export default function ReviewScheduleCard({ reviews, onScheduleReview }) {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

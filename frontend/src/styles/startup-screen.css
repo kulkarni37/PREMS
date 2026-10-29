@@ -1,0 +1,272 @@
+/* ===================================================================
+   PRMES Professional Startup / Loading Screen (Light Theme Homepage Style)
+   =================================================================== */
+
+.prmes-startup-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background-color: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: var(--font-body, 'Inter', sans-serif);
+  color: #1e293b;
+  user-select: none;
+}
+
+/* Subtle Homepage Grid Background */
+.prmes-startup__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(8, 145, 168, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(8, 145, 168, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+}
+
+/* Ambient Soft Teal Background Glow */
+.prmes-startup__glow {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(8, 145, 168, 0.12) 0%, rgba(248, 250, 252, 0) 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  filter: blur(40px);
+}
+
+/* Compact Glassmorphism Central Card */
+.prmes-startup__container {
+  position: relative;
+  z-index: 2;
+  width: 90%;
+  max-width: 440px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(8, 145, 168, 0.18);
+  border-radius: 20px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 20px 50px -15px rgba(15, 23, 42, 0.08), 0 0 30px -10px rgba(8, 145, 168, 0.12);
+}
+
+/* 1. LOGO - Centered, Large, Aspect-Ratio Preserved */
+.prmes-startup__logo-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  padding: 4px;
+}
+
+.prmes-startup__logo-img {
+  width: 240px;
+  max-width: 80vw;
+  height: auto;
+  max-height: 80px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 14px rgba(8, 145, 168, 0.2));
+}
+
+/* 2. INITIALIZING BADGE */
+.prmes-startup__badge-wrap {
+  margin-bottom: 8px;
+}
+
+.prmes-startup__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  background: rgba(8, 145, 168, 0.08);
+  border: 1px solid rgba(8, 145, 168, 0.25);
+  color: #0891a8;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.prmes-startup__pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #0891a8;
+  box-shadow: 0 0 8px rgba(8, 145, 168, 0.6);
+  animation: prmes-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes prmes-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.3); }
+}
+
+/* 3. SUBTITLE */
+.prmes-startup__title {
+  font-family: var(--font-display, 'Space Grotesk', sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  color: #47576b;
+  margin: 0 0 22px 0;
+  letter-spacing: -0.1px;
+}
+
+/* 4. PROGRESS BAR */
+.prmes-startup__progress-box {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.prmes-startup__progress-track {
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.prmes-startup__progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0891a8 0%, #00b4d8 100%);
+  border-radius: 6px;
+  box-shadow: 0 0 10px rgba(8, 145, 168, 0.35);
+  transition: width 0.05s linear;
+}
+
+.prmes-startup__progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.prmes-startup__status-text {
+  font-family: var(--font-mono, monospace);
+  color: #0891a8;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.prmes-startup__pct {
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* 5. STATUS CARDS (2x2 Grid) */
+.prmes-startup__steps {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  text-align: left;
+}
+
+.prmes-startup__step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Pending State */
+.prmes-startup__step--pending {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #94a3b8;
+}
+
+/* Currently Processing State */
+.prmes-startup__step--active {
+  background: rgba(8, 145, 168, 0.08);
+  border: 1px solid rgba(8, 145, 168, 0.32);
+  color: #0891a8;
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(8, 145, 168, 0.08);
+}
+
+/* Completed State */
+.prmes-startup__step--done {
+  background: rgba(8, 145, 168, 0.05);
+  border: 1px solid rgba(8, 145, 168, 0.2);
+  color: #1e293b;
+}
+
+.prmes-startup__step-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.prmes-startup__check {
+  color: #0891a8;
+  font-size: 15px;
+}
+
+.prmes-startup__spinner {
+  color: #0891a8;
+  font-size: 14px;
+  animation: prmes-spin 0.9s linear infinite;
+}
+
+@keyframes prmes-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.prmes-startup__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #cbd5e1;
+}
+
+.prmes-startup__step-label {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 480px) {
+  .prmes-startup__container {
+    padding: 24px 18px;
+    width: 92%;
+  }
+
+  .prmes-startup__logo-img {
+    width: 200px;
+    max-height: 70px;
+  }
+
+  .prmes-startup__steps {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .prmes-startup__title {
+    font-size: 13.5px;
+    margin-bottom: 18px;
+  }
+}

@@ -12,7 +12,7 @@ class Department(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
-    users = db.relationship('User', backref='department_obj', lazy=True)
+    users = db.relationship('User', foreign_keys='User.department_id', backref='department_obj', lazy=True)
 
     def to_dict(self):
         return {

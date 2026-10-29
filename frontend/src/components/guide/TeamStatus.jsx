@@ -1,8 +1,8 @@
 export default function TeamStatus({ counts }) {
   const statusItems = [
-    { key: 'ontrack', label: 'On Track', count: counts?.ontrack ?? 5, dotClass: 'gd-status-dot--ontrack' },
-    { key: 'attention', label: 'Needs Attention', count: counts?.attention ?? 2, dotClass: 'gd-status-dot--attention' },
-    { key: 'atrisk', label: 'At Risk', count: counts?.atrisk ?? 1, dotClass: 'gd-status-dot--atrisk' },
+    { key: 'ontrack', label: 'On Track', count: counts?.ontrack ?? 0, dotClass: 'gd-status-dot--ontrack' },
+    { key: 'attention', label: 'Needs Attention', count: counts?.attention ?? 0, dotClass: 'gd-status-dot--attention' },
+    { key: 'atrisk', label: 'At Risk', count: counts?.atrisk ?? 0, dotClass: 'gd-status-dot--atrisk' },
     { key: 'completed', label: 'Completed', count: counts?.completed ?? 0, dotClass: 'gd-status-dot--completed' },
   ];
 

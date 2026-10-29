@@ -2,28 +2,28 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { PiX, PiGridFour, PiCheckCircle } from 'react-icons/pi';
 import { selectStudentDomain } from '../../services/api';
+import { FIXED_PROJECT_DOMAINS } from '../../constants/domains';
 
-export default function SelectDomainModal({ isOpen, onClose, currentDomain, onDomainSelected }) {
-  const [selected, setSelected] = useState(currentDomain || 'Artificial Intelligence & Machine Learning');
+export default function SelectDomainModal({ isOpen, onClose, currentDomain, onDomainSelected, user, team }) {
+  const [selected, setSelected] = useState(currentDomain || FIXED_PROJECT_DOMAINS[0]);
   const [submitting, setSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
-  const DOMAINS = [
-    { title: 'Artificial Intelligence & Machine Learning', desc: 'Deep learning, computer vision, NLP, and predictive intelligent models.' },
-    { title: 'Web Development', desc: 'Modern full-stack web applications, microservices, and web performance.' },
-    { title: 'Data Science', desc: 'Big data processing, analytics, data visualization, and statistical learning.' },
-    { title: 'Cyber Security', desc: 'Network security, cryptography, vulnerability testing, and secure protocols.' },
-    { title: 'Cloud Computing', desc: 'Distributed systems, serverless architectures, AWS/Azure, and DevOps.' },
-    { title: 'IoT', desc: 'Smart embedded systems, sensors, robotics, and hardware automation.' },
-    { title: 'Mobile Application Development', desc: 'Native & cross-platform mobile apps for Android & iOS.' },
-    { title: 'Software Engineering', desc: 'Enterprise architecture, design patterns, testing frameworks, and agile.' }
-  ];
+  const DOMAINS = FIXED_PROJECT_DOMAINS.map(d => ({
+    title: d,
+    desc: `Specialized project domain for final year evaluation: ${d}`
+  }));
 
   const handleSubmit = async () => {
     try {
       setSubmitting(true);
-      await selectStudentDomain({ domain: selected });
+      await selectStudentDomain({
+        domain: selected,
+        teamId: team?.team_id,
+        leaderEmail: user?.email || user?.student_id || user?.usn,
+        user_id: user?.id
+      });
     } catch (err) {
       // Backend placeholder notice - proceed with local state update
     } finally {

@@ -1,44 +1,8 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { PiStarBold, PiCalendarBlank, PiCheckCircle, PiNotePencil } from 'react-icons/pi';
-import EvaluationPanel from './EvaluationPanel';
 
-export default function UpcomingEvaluations({ evaluations, onOpenEvalModal }) {
-  const DEFAULT_EVALUATIONS = [
-    {
-      id: 'eval1',
-      teamId: 'PRMES-TEAM-2026-014',
-      teamTitle: 'AI-Based Student Performance Prediction',
-      title: 'Review 1 Evaluation',
-      date: '20 Sept 2026',
-      status: 'Upcoming',
-      marks: null,
-      maxMarks: 50,
-    },
-    {
-      id: 'eval2',
-      teamId: 'PRMES-TEAM-2026-021',
-      teamTitle: 'Blockchain-Based Electronic Health Record System',
-      title: 'Synopsis & Architecture Review',
-      date: '18 Sept 2026',
-      status: 'Upcoming',
-      marks: null,
-      maxMarks: 50,
-    },
-    {
-      id: 'eval3',
-      teamId: 'PRMES-TEAM-2026-009',
-      teamTitle: 'Smart Agriculture System using IoT Sensors',
-      title: 'Review 1 Evaluation',
-      date: '12 Aug 2026',
-      status: 'Completed',
-      marks: 44,
-      maxMarks: 50,
-      feedback: 'Excellent IoT sensor calibration. Implementation meets expected milestones.'
-    }
-  ];
-
-  const evalList = evaluations && evaluations.length > 0 ? evaluations : DEFAULT_EVALUATIONS;
+export default function UpcomingEvaluations({ evaluations = [], onOpenEvalModal }) {
+  const evalList = Array.isArray(evaluations) ? evaluations : [];
 
   if (evalList.length === 0) {
     return (
@@ -101,13 +65,13 @@ export default function UpcomingEvaluations({ evaluations, onOpenEvalModal }) {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              {item.status === 'Completed' ? (
+              {item.status === 'Completed' || item.status === 'APPROVED' ? (
                 <div style={{ textAlign: 'right' }}>
                   <span className="sd-doc-status-pill sd-doc-status-pill--approved">
-                    Score: {item.marks} / {item.maxMarks}
+                    Approved ✓
                   </span>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    Completed ✓
+                    Stage Completed
                   </div>
                 </div>
               ) : (

@@ -6,12 +6,11 @@ export default function ProjectProgress({ currentStageIndex = 0 }) {
     { id: 1, label: 'Team Registration' },
     { id: 2, label: 'Domain Selection' },
     { id: 3, label: 'Guide Allocation' },
-    { id: 4, label: 'Project Proposal' },
-    { id: 5, label: 'Synopsis' },
-    { id: 6, label: 'Review 1' },
-    { id: 7, label: 'Review 2 / Final' },
-    { id: 8, label: 'Final Evaluation' },
-    { id: 9, label: 'Completed' },
+    { id: 4, label: 'Phase 1 - Review 1' },
+    { id: 5, label: 'Phase 1 - Review 2' },
+    { id: 6, label: 'Phase 2 - Review 1' },
+    { id: 7, label: 'Phase 2 - Review 2' },
+    { id: 8, label: 'Completed' },
   ];
 
   const totalStages = STAGES.length;
@@ -27,7 +26,7 @@ export default function ProjectProgress({ currentStageIndex = 0 }) {
           <span className="sd-card__title-icon">⚡</span> Project Workflow Lifecycle
         </h2>
         <span className="sd-welcome-card__status-pill">
-          Stage {currentStageIndex + 1} of {totalStages}: {STAGES[currentStageIndex]?.label}
+          Stage {currentStageIndex + 1} of {totalStages}: {STAGES[currentStageIndex]?.label || 'Active Stage'}
         </span>
       </div>
 

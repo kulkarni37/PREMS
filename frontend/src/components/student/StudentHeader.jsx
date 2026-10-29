@@ -1,4 +1,6 @@
-import { PiBell, PiList, PiSignOut } from 'react-icons/pi';
+import { useState, useEffect } from 'react';
+import { PiBell, PiList, PiSignOut, PiPencilSimple } from 'react-icons/pi';
+import { getProfilePhotoUrl } from '../../services/api';
 
 export default function StudentHeader({
   user,
@@ -6,7 +8,14 @@ export default function StudentHeader({
   onToggleMobileSidebar,
   unreadCount = 3,
   onOpenNotifications,
+  onOpenEditProfile,
 }) {
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [user?.profile_photo]);
+
   return (
     <header className="sd-header">
       <div className="sd-header__title-area">
@@ -30,6 +39,17 @@ export default function StudentHeader({
           </span>
         </div>
 
+        {/* Edit Profile Button */}
+        <button
+          className="sd-btn sd-btn-outline"
+          style={{ padding: '6px 12px', fontSize: '12px', gap: '5px' }}
+          onClick={onOpenEditProfile}
+          title="Edit Profile"
+          aria-label="Edit Profile"
+        >
+          <PiPencilSimple /> Edit Profile
+        </button>
+
         {/* Notification Icon */}
         <button
           className="sd-icon-btn"
@@ -42,8 +62,22 @@ export default function StudentHeader({
         </button>
 
         {/* User avatar */}
-        <div className="sd-avatar" style={{ cursor: 'pointer' }} title={user?.full_name || 'Student'}>
-          {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'S'}
+        <div
+          className="sd-avatar"
+          style={{ cursor: 'pointer', overflow: 'hidden' }}
+          title={user?.full_name || 'Student'}
+          onClick={onOpenEditProfile}
+        >
+          {user?.profile_photo && !imgError ? (
+            <img
+              src={getProfilePhotoUrl(user.profile_photo)}
+              alt={user.full_name || 'Profile'}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'S'
+          )}
         </div>
 
         {/* Mobile menu toggle button */}

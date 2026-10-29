@@ -14,6 +14,8 @@ import {
   PiX,
 } from 'react-icons/pi';
 
+import logo from '../../assets/logo.png';
+
 export default function CoordinatorSidebar({
   activeTab,
   setActiveTab,
@@ -48,7 +50,7 @@ export default function CoordinatorSidebar({
     <aside className={`cd-sidebar ${isOpen ? 'cd-sidebar--open' : ''}`}>
       <div className="cd-sidebar__head">
         <div className="cd-sidebar__logo-mark">
-          <PiCircuitry />
+          <img src={logo} alt="PRMES Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
         </div>
         <div className="cd-sidebar__brand-text">
           <span className="cd-sidebar__brand-title">PRMES</span>

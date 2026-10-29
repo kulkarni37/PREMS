@@ -8,13 +8,12 @@ import AdminStats from '../../components/admin/AdminStats';
 import DepartmentManagement from '../../components/admin/DepartmentManagement';
 import UserManagement from '../../components/admin/UserManagement';
 import FacultyImport from '../../components/admin/FacultyImport';
-import RoleManagement from '../../components/admin/RoleManagement';
 import ProjectOverview from '../../components/admin/ProjectOverview';
 import GuideAllocationManagement from '../../components/admin/GuideAllocationManagement';
 import DomainManagement from '../../components/admin/DomainManagement';
+import PastProjectsTable from '../../components/admin/PastProjectsTable';
 import SystemAlerts from '../../components/admin/SystemAlerts';
 import Announcements from '../../components/admin/Announcements';
-import SystemActivity from '../../components/admin/SystemActivity';
 import SystemHealth from '../../components/admin/SystemHealth';
 import ReportsAnalytics from '../../components/admin/ReportsAnalytics';
 import AdminSettingsModal from '../../components/admin/AdminSettingsModal';
@@ -133,10 +132,7 @@ export default function AdminDashboard() {
             </div>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <span className="sd-welcome-card__status-pill">
-                Institution: {user?.institution_code || 'PRMES'}
-              </span>
-              <span className="sd-welcome-card__status-pill">
-                Dept: {user?.department || 'All Departments'}
+                Institution: {user?.institution_code || 'GNDEC'}
               </span>
               <span className="ad-health-badge">
                 <span className="ad-health-dot" /> Operational
@@ -162,16 +158,10 @@ export default function AdminDashboard() {
             <UserManagement adminUser={user} />
           </motion.div>
 
-          {/* Faculty Import & RBAC Management */}
-          <div className="sd-grid-2">
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.25 }}>
-              <FacultyImport />
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}>
-              <RoleManagement />
-            </motion.div>
-          </div>
+          {/* Faculty Account Batch Import */}
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.25 }}>
+            <FacultyImport />
+          </motion.div>
 
           {/* System-Wide Project Overview */}
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.35 }}>
@@ -185,7 +175,12 @@ export default function AdminDashboard() {
 
           {/* Academic Project Domains */}
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.45 }}>
-            <DomainManagement />
+            <DomainManagement adminUser={user} />
+          </motion.div>
+
+          {/* 5-Year Past Project Repository */}
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.48 }}>
+            <PastProjectsTable />
           </motion.div>
 
           {/* 2-Column Grid: Alerts & Announcements */}
@@ -202,11 +197,6 @@ export default function AdminDashboard() {
           {/* Reports & Analytics */}
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.6 }}>
             <ReportsAnalytics />
-          </motion.div>
-
-          {/* System Audit Log */}
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.65 }}>
-            <SystemActivity />
           </motion.div>
         </div>
       </div>

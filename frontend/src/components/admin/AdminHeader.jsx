@@ -16,14 +16,14 @@ export default function AdminHeader({
       </div>
 
       <div className="ad-header__actions">
-        {/* Admin Metadata Pill */}
+        {/* Admin Metadata Pill (Institution-level) */}
         <div className="ad-header__pill">
           <span className="ad-header__pill-item">
             Year: <strong>{user?.academic_year || '2026–27'}</strong>
           </span>
           <span style={{ opacity: 0.3 }}>|</span>
           <span className="ad-header__pill-item">
-            Dept: <strong>{user?.department || 'CSE'}</strong>
+            Institution: <strong>{user?.institution_code || 'GNDEC'}</strong>
           </span>
         </div>
 

@@ -1,39 +1,9 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { PiFolderSimple, PiFilePdf, PiCheckCircle, PiNotePencil, PiEyeBold } from 'react-icons/pi';
+import { PiFolderSimple, PiFilePdf, PiCheckCircle, PiNotePencil, PiDownloadSimple } from 'react-icons/pi';
+import { getDocumentUrl } from '../../services/api';
 
-export default function PendingDocuments({ documents, onReviewDoc }) {
-  const DEFAULT_PENDING_DOCS = [
-    {
-      id: 'doc1',
-      teamId: 'PRMES-TEAM-2026-014',
-      teamTitle: 'AI-Based Student Performance Prediction',
-      docTitle: 'Project Synopsis',
-      submittedDate: '10 Sept 2026',
-      status: 'Pending Review',
-      fileName: 'Synopsis_Team014_Final.pdf'
-    },
-    {
-      id: 'doc2',
-      teamId: 'PRMES-TEAM-2026-021',
-      teamTitle: 'Blockchain-Based Electronic Health Record System',
-      docTitle: 'System Architecture & Proposal',
-      submittedDate: '08 Sept 2026',
-      status: 'Pending Review',
-      fileName: 'Proposal_HealthBlock.pdf'
-    },
-    {
-      id: 'doc3',
-      teamId: 'PRMES-TEAM-2026-033',
-      teamTitle: 'Cloud-Native Microservices E-Commerce Portal',
-      docTitle: 'Review 1 Revised Presentation',
-      submittedDate: '05 Sept 2026',
-      status: 'Changes Requested',
-      fileName: 'Review1_Revisions_v2.pdf'
-    }
-  ];
-
-  const docList = documents && documents.length > 0 ? documents : DEFAULT_PENDING_DOCS;
+export default function PendingDocuments({ documents = [], onReviewDoc }) {
+  const docList = Array.isArray(documents) ? documents : [];
 
   if (docList.length === 0) {
     return (
@@ -87,10 +57,22 @@ export default function PendingDocuments({ documents, onReviewDoc }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span className={`sd-status-badge ${doc.status === 'Changes Requested' ? 'sd-status-badge--pending' : 'sd-status-badge--reviewed'}`}>
                 {doc.status}
               </span>
+
+              {doc.filePath && (
+                <a
+                  href={getDocumentUrl(doc.filePath)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="gd-btn gd-btn-outline"
+                  style={{ padding: '7px 12px', fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '5px', textDecoration: 'none' }}
+                >
+                  <PiDownloadSimple /> View File
+                </a>
+              )}
 
               <motion.button
                 className="gd-btn gd-btn-primary"

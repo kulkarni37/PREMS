@@ -1,14 +1,16 @@
 import { PiGridFour } from 'react-icons/pi';
 
-export default function DomainDistributionCard() {
-  const DOMAINS = [
-    { name: 'Artificial Intelligence & ML', count: 14 },
-    { name: 'Web Development', count: 10 },
-    { name: 'Data Science', count: 8 },
-    { name: 'Cyber Security', count: 6 },
-    { name: 'Cloud Computing', count: 5 },
-    { name: 'IoT & Embedded Systems', count: 5 },
+export default function DomainDistributionCard({ domains = [] }) {
+  const DEFAULT_EMPTY = [
+    { name: 'Artificial Intelligence & ML', count: 0 },
+    { name: 'Web Development', count: 0 },
+    { name: 'Data Science', count: 0 },
+    { name: 'Cyber Security', count: 0 },
+    { name: 'Cloud Computing', count: 0 },
+    { name: 'IoT & Embedded Systems', count: 0 },
   ];
+
+  const list = Array.isArray(domains) && domains.length > 0 ? domains : DEFAULT_EMPTY;
 
   return (
     <div className="cd-card" id="domains">
@@ -19,7 +21,7 @@ export default function DomainDistributionCard() {
       </div>
 
       <div className="cd-domain-grid">
-        {DOMAINS.map((d) => (
+        {list.map((d) => (
           <div key={d.name} className="cd-domain-box">
             <span className="cd-domain-name">{d.name}</span>
             <span className="cd-domain-count">{d.count} Teams</span>

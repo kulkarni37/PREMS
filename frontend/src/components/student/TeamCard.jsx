@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PiUsersThree, PiPlusBold, PiCrownBold, PiTrash, PiX, PiUserPlus, PiLockKey, PiWarningCircle, PiPencilSimple, PiMagnifyingGlass, PiCheckCircle } from 'react-icons/pi';
-import { removeTeamMember, addTeamMember, fetchEligibleMembers } from '../../services/api';
+import { removeTeamMember, addTeamMember, fetchEligibleMembers, getProfilePhotoUrl } from '../../services/api';
 import EditTeamModal from './EditTeamModal';
 
 export default function TeamCard({ team, user, onOpenRegisterTeam, onTeamUpdated }) {
@@ -238,8 +238,16 @@ export default function TeamCard({ team, user, onOpenRegisterTeam, onTeamUpdated
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: '240px' }}>
-                <div className="sd-avatar" style={{ width: 42, height: 42, fontSize: 16 }}>
-                  {student.full_name ? student.full_name.charAt(0) : 'S'}
+                <div className="sd-avatar" style={{ width: 42, height: 42, fontSize: 16, overflow: 'hidden' }}>
+                  {student.profile_photo ? (
+                    <img
+                      src={getProfilePhotoUrl(student.profile_photo)}
+                      alt={student.full_name || 'Profile'}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    student.full_name ? student.full_name.charAt(0).toUpperCase() : 'S'
+                  )}
                 </div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -257,25 +265,14 @@ export default function TeamCard({ team, user, onOpenRegisterTeam, onTeamUpdated
                   </div>
 
                   <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '3px' }}>
-                    Dept: <strong>{student.department || 'CSE'}</strong> • Sem: <strong>{student.semester || '7th'}</strong> • Sec: <strong>{student.section || 'A'}</strong>
+                    Dept: <strong>{student.department || 'Computer Science & Engineering'}</strong> • Sem: <strong>{student.semester || '7th Semester'}</strong> • Sec: <strong>{student.section || 'A'}</strong>
                   </div>
                 </div>
               </div>
 
-              {/* Member Card Action Buttons (Items 2, 3, 6) */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {/* Edit Button for Leader or Member */}
-                <button
-                  className="sd-btn sd-btn-outline"
-                  style={{ padding: '4px 10px', fontSize: '11.5px' }}
-                  onClick={() => setShowEditModal(true)}
-                  title="Edit Team Details"
-                >
-                  <PiPencilSimple /> Edit
-                </button>
-
-                {/* Remove Button strictly for normal Team Members (Item 2 & 3) */}
-                {showRemoveBtn && (
+              {/* Remove Button strictly for Team Leader to remove members before guide allocation */}
+              {showRemoveBtn && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <button
                     className="sd-btn sd-btn-outline"
                     style={{ padding: '4px 10px', fontSize: '11.5px', color: '#ff6259', borderColor: 'rgba(255, 98, 89, 0.4)' }}
@@ -284,8 +281,8 @@ export default function TeamCard({ team, user, onOpenRegisterTeam, onTeamUpdated
                   >
                     <PiTrash /> Remove
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           );
         })}

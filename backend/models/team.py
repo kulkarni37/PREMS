@@ -30,6 +30,7 @@ class Team(db.Model):
             'status': self.status,
             'current_stage': self.current_stage,
             'members': [m.to_dict() for m in self.members],
+            'documents': [d.to_dict() for d in self.documents],
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 

@@ -7,6 +7,22 @@ const API = axios.create({
   },
 });
 
+API.interceptors.request.use((config) => {
+  try {
+    const saved = localStorage.getItem('prmes_user');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.email) {
+        config.headers['X-User-Email'] = parsed.email;
+      }
+      if (parsed.admin_id || parsed.id || parsed.student_id) {
+        config.headers['X-Admin-ID'] = parsed.admin_id || parsed.id || parsed.student_id;
+      }
+    }
+  } catch (e) {}
+  return config;
+});
+
 /* ===================================================================
    INSTITUTION & PUBLIC ENDPOINTS
    =================================================================== */
@@ -38,6 +54,46 @@ export const fetchOrganizationStatus = async () => {
   }
 };
 
+export const fetchUserProfile = async (email, student_id) => {
+  try {
+    const response = await API.get('/profile', { params: { email, student_id } });
+    return response.data;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const updateUserProfile = async (payload) => {
+  try {
+    const response = await API.put('/profile', payload);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to update profile.' };
+  }
+};
+
+export const uploadProfilePhoto = async (formData) => {
+  try {
+    const response = await API.post('/profile/photo', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to upload profile photo.' };
+  }
+};
+
+export const getProfilePhotoUrl = (photoPath) => {
+  if (!photoPath) return null;
+  if (photoPath.startsWith('data:') || photoPath.startsWith('blob:') || photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
+    return photoPath;
+  }
+  if (photoPath.startsWith('/')) {
+    return photoPath;
+  }
+  return `/${photoPath}`;
+};
+
 export const fetchInstitutions = async () => {
   try {
     const response = await API.get('/institutions');
@@ -50,6 +106,15 @@ export const fetchInstitutions = async () => {
 export const fetchDepartments = async (institutionId) => {
   try {
     const response = await API.get('/departments', { params: { institution_id: institutionId } });
+    return response.data;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const fetchDomains = async () => {
+  try {
+    const response = await API.get('/domains');
     return response.data;
   } catch (error) {
     return null;
@@ -99,7 +164,7 @@ export const resetPassword = async (studentId, email, otp, newPassword) => {
   }
 };
 
-export const registerStudent = async (formData) => {
+export const registerUser = async (formData) => {
   try {
     const response = await API.post('/auth/register', formData);
     return response.data;
@@ -107,6 +172,8 @@ export const registerStudent = async (formData) => {
     throw error.response?.data || { success: false, message: 'Registration failed.' };
   }
 };
+
+export const registerStudent = registerUser;
 
 export const loginStudent = async (email, password) => {
   try {
@@ -172,6 +239,42 @@ export const updateTeamInfo = async (teamData) => {
     return response.data;
   } catch (error) {
     throw error.response?.data || { success: false, message: 'Failed to update team info.' };
+  }
+};
+
+export const checkProjectSimilarity = async (title, leaderEmail, threshold = 40.0) => {
+  try {
+    const response = await API.post('/student/check-similarity', { title, leaderEmail, threshold });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to run project similarity check.' };
+  }
+};
+
+export const fetchPastProjects = async (q = '', sourcePeriod = '') => {
+  try {
+    const response = await API.get('/admin/past-projects', { params: { q, source_period: sourcePeriod } });
+    return response.data;
+  } catch (error) {
+    return { success: false, projects: [] };
+  }
+};
+
+export const addPastProject = async (projectData) => {
+  try {
+    const response = await API.post('/admin/past-projects', projectData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to add past project.' };
+  }
+};
+
+export const deletePastProject = async (id) => {
+  try {
+    const response = await API.delete(`/admin/past-projects/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to delete past project.' };
   }
 };
 
@@ -311,9 +414,33 @@ export const fetchTeamDiary = async (teamId) => {
    GUIDE DASHBOARD ENDPOINTS
    =================================================================== */
 
-export const fetchGuideDashboard = async () => {
+export const fetchGuideDashboard = async (email) => {
   try {
-    const response = await API.get('/guide/dashboard');
+    const savedUser = JSON.parse(localStorage.getItem('prmes_user') || '{}');
+    const userEmail = email || savedUser.email;
+    const response = await API.get('/guide/dashboard', { params: { email: userEmail } });
+    return response.data;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const markNotificationRead = async (notifId, email) => {
+  try {
+    const savedUser = JSON.parse(localStorage.getItem('prmes_user') || '{}');
+    const userEmail = email || savedUser.email;
+    const response = await API.patch(`/notifications/${notifId}/read`, { email: userEmail }, { params: { email: userEmail } });
+    return response.data;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const markAllNotificationsRead = async (email) => {
+  try {
+    const savedUser = JSON.parse(localStorage.getItem('prmes_user') || '{}');
+    const userEmail = email || savedUser.email;
+    const response = await API.post('/notifications/mark-all-read', { email: userEmail }, { params: { email: userEmail } });
     return response.data;
   } catch (error) {
     return null;
@@ -374,9 +501,27 @@ export const fetchGuideEvaluations = async () => {
   }
 };
 
-export const submitGuideEvaluation = async (evaluationData) => {
+export const fetchReviewStudentMarks = async (params = {}) => {
   try {
-    const response = await API.post('/guide/evaluations', evaluationData);
+    const savedUser = JSON.parse(localStorage.getItem('prmes_user') || '{}');
+    const userEmail = params.email || savedUser.email;
+    const finalParams = { ...params };
+    if (userEmail) finalParams.email = userEmail;
+    const response = await API.get('/guide/review-marks', { params: finalParams });
+    return response.data;
+  } catch (error) {
+    console.error("fetchReviewStudentMarks error:", error.response?.data || error.message);
+    return null;
+  }
+};
+
+export const submitGuideEvaluation = async (evaluationData = {}) => {
+  try {
+    const savedUser = JSON.parse(localStorage.getItem('prmes_user') || '{}');
+    const userEmail = evaluationData.email || savedUser.email;
+    const payload = { ...evaluationData };
+    if (userEmail) payload.email = userEmail;
+    const response = await API.post('/guide/evaluations', payload);
     return response.data;
   } catch (error) {
     throw error.response?.data || { success: false, message: 'Failed to submit evaluation.' };
@@ -405,12 +550,14 @@ export const fetchGuideNotifications = async () => {
    COORDINATOR DASHBOARD ENDPOINTS
    =================================================================== */
 
-export const fetchCoordinatorDashboard = async () => {
+export const fetchCoordinatorDashboard = async (email) => {
   try {
-    const response = await API.get('/coordinator/dashboard');
+    const savedUser = JSON.parse(localStorage.getItem('prmes_user') || '{}');
+    const userEmail = email || savedUser.email;
+    const response = await API.get('/coordinator/dashboard', { params: userEmail ? { email: userEmail } : {} });
     return response.data;
   } catch (error) {
-    return null;
+    throw error.response?.data || { success: false, message: 'Unable to load dashboard statistics.' };
   }
 };
 
@@ -645,9 +792,22 @@ export const updateAdminGuideRules = async (guideId, rulesData) => {
   }
 };
 
-export const fetchAdminDomains = async () => {
+export const fetchAdminDomains = async (email) => {
   try {
-    const response = await API.get('/admin/domains');
+    const savedUser = JSON.parse(localStorage.getItem('prmes_user') || '{}');
+    const userEmail = email || savedUser.email;
+    const response = await API.get('/admin/domains', { params: { email: userEmail } });
+    return response.data;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const fetchAdminDomainStats = async (email) => {
+  try {
+    const savedUser = JSON.parse(localStorage.getItem('prmes_user') || '{}');
+    const userEmail = email || savedUser.email;
+    const response = await API.get('/admin/domain-stats', { params: { email: userEmail } });
     return response.data;
   } catch (error) {
     return null;
@@ -725,3 +885,271 @@ export const fetchAdminSystemHealth = async () => {
     return null;
   }
 };
+
+export const createAdminStudent = async (studentData) => {
+  try {
+    const response = await API.post('/admin/students', studentData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to create student.' };
+  }
+};
+
+export const updateAdminStudent = async (studentId, studentData) => {
+  try {
+    const response = await API.put(`/admin/students/${studentId}`, studentData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to update student.' };
+  }
+};
+
+export const deleteAdminStudent = async (studentId) => {
+  try {
+    const response = await API.delete(`/admin/students/${studentId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to delete student.' };
+  }
+};
+
+export const createAdminGuide = async (guideData) => {
+  try {
+    const response = await API.post('/admin/guides', guideData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to create guide.' };
+  }
+};
+
+export const updateAdminGuide = async (guideId, guideData) => {
+  try {
+    const response = await API.put(`/admin/guides/${guideId}`, guideData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to update guide.' };
+  }
+};
+
+export const deleteAdminGuide = async (guideId) => {
+  try {
+    const response = await API.delete(`/admin/guides/${guideId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to delete guide.' };
+  }
+};
+
+export const createAdminCoordinator = async (coordData) => {
+  try {
+    const response = await API.post('/admin/coordinators', coordData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to create coordinator.' };
+  }
+};
+
+export const updateAdminCoordinator = async (coordId, coordData) => {
+  try {
+    const response = await API.put(`/admin/coordinators/${coordId}`, coordData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to update coordinator.' };
+  }
+};
+
+export const deleteAdminCoordinator = async (coordId) => {
+  try {
+    const response = await API.delete(`/admin/coordinators/${coordId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to delete coordinator.' };
+  }
+};
+
+export const updateAdminTeam = async (teamId, teamData) => {
+  try {
+    const response = await API.put(`/admin/teams/${teamId}`, teamData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to update team.' };
+  }
+};
+
+export const deleteAdminTeam = async (teamId) => {
+  try {
+    const response = await API.delete(`/admin/teams/${teamId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to delete team.' };
+  }
+};
+
+export const fetchAdminAllocations = async () => {
+  try {
+    const response = await API.get('/admin/allocations');
+    return response.data;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const assignAdminGuide = async (allocationData) => {
+  try {
+    const response = await API.post('/admin/allocations/assign', allocationData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to assign guide.' };
+  }
+};
+
+export const removeAdminGuide = async (allocationData) => {
+  try {
+    const response = await API.post('/admin/allocations/remove', allocationData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to remove guide.' };
+  }
+};
+
+export const unlockAdminReview = async (unlockData) => {
+  try {
+    const response = await API.post('/admin/reviews/unlock', unlockData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to unlock review window.' };
+  }
+};
+
+export const fetchAdminDocuments = async () => {
+  try {
+    const response = await API.get('/admin/documents');
+    return response.data;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const updateAdminEvaluation = async (markId, evalData) => {
+  try {
+    const response = await API.put(`/admin/evaluations/${markId}`, evalData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to update evaluation.' };
+  }
+};
+
+export const checkAdminSimilarity = async (title, abstract) => {
+  try {
+    const response = await API.post('/admin/past-projects/check-similarity', { title, abstract });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to check similarity.' };
+  }
+};
+
+export const fetchAdminNotifications = async () => {
+  try {
+    const response = await API.get('/admin/notifications');
+    return response.data;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const createAdminNotification = async (notifData) => {
+  try {
+    const response = await API.post('/admin/notifications', notifData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to send notification.' };
+  }
+};
+
+export const updateAdminUserRole = async (userId, roleData) => {
+  try {
+    const response = await API.post(`/admin/users/${userId}/role`, roleData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to update user role.' };
+  }
+};
+
+export const getAdminComprehensiveReportUrl = () => {
+  return `${getBackendBaseUrl()}/api/admin/reports/comprehensive-pdf`;
+};
+
+export const getAdminExportCsvUrl = (type = 'marks') => {
+  return `${getBackendBaseUrl()}/api/admin/reports/export-csv?type=${encodeURIComponent(type)}`;
+};
+
+export const importAdminMarksExcel = async (formData) => {
+  try {
+    const response = await API.post('/admin/reports/import-marks-excel', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to import Excel marks.' };
+  }
+};
+
+/* ===================================================================
+   FILE & DOCUMENT URL UTILITY HELPERS
+   =================================================================== */
+
+export const getBackendBaseUrl = () => {
+  if (import.meta.env.VITE_BACKEND_URL) {
+    return import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname || 'localhost';
+    return `http://${hostname}:5000`;
+  }
+  return 'http://127.0.0.1:5000';
+};
+
+export const getDocumentUrl = (filePath) => {
+  if (!filePath) return '';
+  if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+    return filePath;
+  }
+  const baseUrl = getBackendBaseUrl();
+  const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
+  
+  // Encode URL segments cleanly handling spaces (%20) and special characters
+  const encodedPath = cleanPath
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+
+  return `${baseUrl}${encodedPath}`;
+};
+
+export const getComprehensiveReportUrl = () => {
+  return `${getBackendBaseUrl()}/api/coordinator/reports/comprehensive-pdf`;
+};
+
+export const getExportMarksCsvUrl = () => {
+  return `${getBackendBaseUrl()}/api/coordinator/reports/export-csv`;
+};
+
+export const getStudentMarksPdfUrl = (studentId, phase = 1, review = 1) => {
+  return `${getBackendBaseUrl()}/api/coordinator/reports/student-pdf/${studentId}?phase=${phase}&review=${review}`;
+};
+
+export const getOwnMarksPdfUrl = (email, phase = 1, review = 1) => {
+  return `${getBackendBaseUrl()}/api/student/marks-card-pdf?email=${encodeURIComponent(email || '')}&phase=${phase}&review=${review}`;
+};
+
+export const importCoordinatorMarksExcel = async (formData) => {
+  try {
+    const response = await API.post('/coordinator/reports/import-marks-excel', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: 'Failed to import Excel marks.' };
+  }
+};
+

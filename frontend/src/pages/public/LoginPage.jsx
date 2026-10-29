@@ -14,6 +14,7 @@ import {
   PiUploadSimple,
   PiChartLineUp,
 } from 'react-icons/pi';
+import logo from "../../assets/logo.png";
 import { loginStudent } from '../../services/api';
 import "../../styles/login.css";
 
@@ -73,6 +74,8 @@ export default function Login() {
             navigate('/coordinator/dashboard');
           } else if (role === 'GUIDE') {
             navigate('/guide/dashboard');
+          } else if (role === 'TEAM_LEADER' || role === 'STUDENT') {
+            navigate('/student/dashboard');
           } else {
             navigate('/student/dashboard');
           }
@@ -122,7 +125,7 @@ export default function Login() {
         <div className="login-brand__content">
           <div className="login-brand__logo">
             <span className="login-brand__logo-mark">
-              <PiCircuitry />
+              <img src={logo} alt="PRMES Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </span>
             <span className="login-brand__logo-text">PRMES</span>
           </div>
@@ -300,7 +303,7 @@ export default function Login() {
           >
             Don&rsquo;t have an account?{' '}
             <Link to="/register" className="login-card__link">
-              Register as Student
+              Register
             </Link>
           </motion.p>
         </motion.div>

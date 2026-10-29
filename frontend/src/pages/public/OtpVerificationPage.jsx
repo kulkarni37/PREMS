@@ -11,6 +11,7 @@ import {
   PiTimer,
   PiArrowsClockwise,
 } from 'react-icons/pi';
+import logo from "../../assets/logo.png";
 import { verifyOTP, requestForgotPasswordOTP } from '../../services/api';
 import '../../styles/otp-verification.css';
 
@@ -209,7 +210,7 @@ export default function OtpVerificationPage() {
         <div className="otp-brand__content">
           <div className="otp-brand__logo">
             <span className="otp-brand__logo-mark">
-              <PiCircuitry />
+              <img src={logo} alt="PRMES Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </span>
             <span className="otp-brand__logo-text">PRMES</span>
           </div>

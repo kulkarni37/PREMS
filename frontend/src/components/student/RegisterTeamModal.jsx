@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { PiX, PiUsersThree, PiTrash, PiCheckCircle } from 'react-icons/pi';
 import { registerStudentTeam } from '../../services/api';
+import { FIXED_PROJECT_DOMAINS } from '../../constants/domains';
 
 export default function RegisterTeamModal({ isOpen, onClose, onTeamRegistered, user }) {
   const [title, setTitle] = useState('');
+  const [domain, setDomain] = useState(FIXED_PROJECT_DOMAINS[0]);
   const [member1, setMember1] = useState(''); // Leader (User)
   const [member2, setMember2] = useState(''); // Member 2 email or USN
   const [member3, setMember3] = useState(''); // Member 3 email or USN
@@ -32,6 +34,7 @@ export default function RegisterTeamModal({ isOpen, onClose, onTeamRegistered, u
 
     const payload = {
       title: title.trim(),
+      domain: domain || FIXED_PROJECT_DOMAINS[0],
       leaderEmail: user?.email || 'you@gndec.edu.in',
       memberEmails: [member2.trim(), member3.trim(), member4.trim()]
     };
@@ -98,6 +101,22 @@ export default function RegisterTeamModal({ isOpen, onClose, onTeamRegistered, u
               onChange={(e) => setTitle(e.target.value)}
               required
             />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+              Project Domain *
+            </label>
+            <select
+              className="register-input"
+              style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-surface)' }}
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+            >
+              {FIXED_PROJECT_DOMAINS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
           </div>
 
           {/* Member 1 (Leader) */}

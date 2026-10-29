@@ -12,6 +12,7 @@ import {
   PiArrowLeft,
   PiX,
 } from 'react-icons/pi';
+import logo from "../../assets/logo.png";
 import { resetPassword } from '../../services/api';
 import '../../styles/reset-password.css';
 
@@ -149,7 +150,7 @@ export default function ResetPasswordPage() {
         <div className="reset-brand__content">
           <div className="reset-brand__logo">
             <span className="reset-brand__logo-mark">
-              <PiCircuitry />
+              <img src={logo} alt="PRMES Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </span>
             <span className="reset-brand__logo-text">PRMES</span>
           </div>

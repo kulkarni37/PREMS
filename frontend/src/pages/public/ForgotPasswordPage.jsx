@@ -10,6 +10,7 @@ import {
   PiArrowLeft,
   PiLockKey,
 } from 'react-icons/pi';
+import logo from "../../assets/logo.png";
 import { requestForgotPasswordOTP } from '../../services/api';
 import '../../styles/forgot-password.css';
 
@@ -118,7 +119,7 @@ export default function ForgotPasswordPage() {
         <div className="forgot-brand__content">
           <div className="forgot-brand__logo">
             <span className="forgot-brand__logo-mark">
-              <PiCircuitry />
+              <img src={logo} alt="PRMES Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </span>
             <span className="forgot-brand__logo-text">PRMES</span>
           </div>

@@ -15,7 +15,12 @@ import {
   PiGear,
   PiSignOut,
   PiX,
+  PiGraduationCap,
+  PiUsersThree,
+  PiFolderSimple,
 } from 'react-icons/pi';
+
+import logo from '../../assets/logo.png';
 
 export default function AdminSidebar({
   activeTab,
@@ -24,21 +29,22 @@ export default function AdminSidebar({
   onLogout,
   isOpen,
   onClose,
-  unreadCount = 3,
+  unreadCount = 0,
 }) {
   const navItems = [
-    { id: 'overview', label: 'Dashboard', icon: <PiLayout /> },
-    { id: 'users', label: 'User Management', icon: <PiUsers /> },
-    { id: 'import', label: 'Faculty Import', icon: <PiUploadSimple /> },
-    { id: 'roles', label: 'Role & Access', icon: <PiKey /> },
-    { id: 'projects', label: 'Project Management', icon: <PiKanban /> },
-    { id: 'guides', label: 'Guide Allocation', icon: <PiChalkboardTeacher /> },
-    { id: 'domains', label: 'Project Domains', icon: <PiGridFour /> },
-    { id: 'reviews', label: 'Academic Reviews', icon: <PiCalendarBlank /> },
-    { id: 'announcements', label: 'Announcements', icon: <PiMegaphone />, badge: unreadCount },
+    { id: 'overview', label: 'Dashboard Overview', icon: <PiLayout /> },
+    { id: 'students', label: 'Student Management', icon: <PiGraduationCap /> },
+    { id: 'faculty', label: 'Guide / Faculty', icon: <PiChalkboardTeacher /> },
+    { id: 'coordinators', label: 'Coordinators', icon: <PiShieldCheck /> },
+    { id: 'teams', label: 'Team Management', icon: <PiUsersThree /> },
+    { id: 'domains', label: 'Project & Domain', icon: <PiGridFour /> },
+    { id: 'allocations', label: 'Guide Allocation', icon: <PiKanban /> },
+    { id: 'reviews', label: 'Review Management', icon: <PiCalendarBlank /> },
+    { id: 'documents', label: 'Document Management', icon: <PiFolderSimple /> },
+    { id: 'evaluations', label: 'Evaluation & Marks', icon: <PiStarBold /> },
     { id: 'reports', label: 'Reports & Analytics', icon: <PiFileText /> },
-    { id: 'activity', label: 'System Audit Log', icon: <PiClockCounterClockwise /> },
-    { id: 'settings', label: 'System Settings', icon: <PiGear /> },
+    { id: 'notifications', label: 'Notifications', icon: <PiMegaphone />, badge: unreadCount },
+    { id: 'system-users', label: 'User & System Accounts', icon: <PiGear /> },
   ];
 
   const handleNavClick = (id) => {
@@ -54,7 +60,7 @@ export default function AdminSidebar({
     <aside className={`ad-sidebar ${isOpen ? 'ad-sidebar--open' : ''}`}>
       <div className="ad-sidebar__head">
         <div className="ad-sidebar__logo-mark">
-          <PiShieldCheck />
+          <img src={logo} alt="PRMES Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
         </div>
         <div className="ad-sidebar__brand-text">
           <span className="ad-sidebar__brand-title">PRMES</span>
@@ -93,7 +99,7 @@ export default function AdminSidebar({
           </div>
           <div className="ad-user-mini__info">
             <span className="ad-user-mini__name">{user?.full_name || 'System Administrator'}</span>
-            <span className="ad-user-mini__role">SUPER ADMIN</span>
+            <span className="ad-user-mini__role">ADMIN</span>
           </div>
         </div>
 

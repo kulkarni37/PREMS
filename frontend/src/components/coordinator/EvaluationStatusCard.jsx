@@ -1,11 +1,11 @@
 import { PiStarBold, PiCheckCircle } from 'react-icons/pi';
 
-export default function EvaluationStatusCard({ evaluations }) {
-  const STAGE_EVALS = [
-    { stage: 'Review 1 Evaluation', evaluated: 42, total: 48, status: 'Active' },
-    { stage: 'Review 2 Mid-Term Defense', evaluated: 28, total: 48, status: 'Active' },
-    { stage: 'Review 3 Code & Demo Audit', evaluated: 12, total: 48, status: 'Upcoming' },
-    { stage: 'Final Defense & Viva Voce', evaluated: 4, total: 48, status: 'Upcoming' },
+export default function EvaluationStatusCard({ stageEvaluations, totalMarksEntered = 0, totalTeams = 0 }) {
+  const STAGE_EVALS = stageEvaluations && stageEvaluations.length > 0 ? stageEvaluations : [
+    { stage: 'Phase 1 — Review 1 (Synopsis)', evaluated: 0, total: totalTeams, status: 'Scheduled' },
+    { stage: 'Phase 1 — Review 2 (Report & PPT)', evaluated: 0, total: totalTeams, status: 'Upcoming' },
+    { stage: 'Phase 2 — Review 1 (Project PPT)', evaluated: 0, total: totalTeams, status: 'Locked' },
+    { stage: 'Phase 2 — Review 2 (Final Defense)', evaluated: 0, total: totalTeams, status: 'Locked' },
   ];
 
   return (
@@ -15,13 +15,13 @@ export default function EvaluationStatusCard({ evaluations }) {
           <PiStarBold className="cd-card__title-icon" /> Faculty Evaluation Monitoring
         </h2>
         <span className="sd-welcome-card__status-pill">
-          86 / 192 Total Stage Marks Entered
+          {totalMarksEntered} Student Marks Recorded in Database
         </span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         {STAGE_EVALS.map((ev, idx) => {
-          const percent = Math.round((ev.evaluated / ev.total) * 100);
+          const percent = ev.total > 0 ? Math.round((ev.evaluated / ev.total) * 100) : 0;
           return (
             <div key={idx} style={{ padding: '16px 20px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-surface)', border: '1px solid var(--border-hairline)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>

@@ -1,17 +1,17 @@
 import { motion } from 'framer-motion';
 import { PiKanban, PiCheckCircle } from 'react-icons/pi';
 
-export default function BatchProgressOverview() {
-  const STAGES = [
-    { label: 'Registration', count: 48, total: 48 },
-    { label: 'Team Formation', count: 46, total: 48 },
-    { label: 'Domain Selection', count: 44, total: 48 },
-    { label: 'Guide Allocated', count: 42, total: 48 },
-    { label: 'Development', count: 35, total: 48 },
-    { label: 'Review 1', count: 22, total: 48 },
-    { label: 'Review 2', count: 12, total: 48 },
-    { label: 'Review 3', count: 6, total: 48 },
-    { label: 'Final Evaluation', count: 4, total: 48 },
+export default function BatchProgressOverview({ stages, totalTeams = 0, academicYear = '2026–27' }) {
+  const STAGES = stages && stages.length > 0 ? stages : [
+    { label: 'Registration', count: 0, total: totalTeams },
+    { label: 'Team Formation', count: 0, total: totalTeams },
+    { label: 'Domain Selection', count: 0, total: totalTeams },
+    { label: 'Guide Allocated', count: 0, total: totalTeams },
+    { label: 'Development', count: 0, total: totalTeams },
+    { label: 'Review 1', count: 0, total: totalTeams },
+    { label: 'Review 2', count: 0, total: totalTeams },
+    { label: 'Review 3', count: 0, total: totalTeams },
+    { label: 'Final Evaluation', count: 0, total: totalTeams },
   ];
 
   return (
@@ -21,13 +21,13 @@ export default function BatchProgressOverview() {
           <PiKanban className="cd-card__title-icon" /> Department Batch Progress Overview
         </h2>
         <span className="sd-welcome-card__status-pill">
-          48 Registered Teams • Academic Year 2026–27
+          {totalTeams} Registered Teams • Academic Year {academicYear}
         </span>
       </div>
 
       <div className="cd-batch-stages">
         {STAGES.map((st, idx) => {
-          const percent = Math.round((st.count / st.total) * 100);
+          const percent = st.total > 0 ? Math.round((st.count / st.total) * 100) : 0;
           return (
             <div key={st.label} className="cd-stage-col">
               <span className="cd-stage-count">{st.count}</span>

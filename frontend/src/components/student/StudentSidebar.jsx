@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   PiCircuitry,
@@ -13,6 +14,8 @@ import {
   PiSignOut,
   PiX,
 } from 'react-icons/pi';
+import logo from '../../assets/logo.png';
+import { getProfilePhotoUrl } from '../../services/api';
 
 export default function StudentSidebar({
   activeTab,
@@ -22,7 +25,13 @@ export default function StudentSidebar({
   isOpen,
   onClose,
   unreadCount = 0,
+  onOpenEditProfile,
 }) {
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [user?.profile_photo]);
   const navItems = [
     { id: 'overview', label: 'Dashboard', icon: <PiLayout /> },
     { id: 'team', label: 'My Team', icon: <PiUsersThree /> },
@@ -48,7 +57,7 @@ export default function StudentSidebar({
     <aside className={`sd-sidebar ${isOpen ? 'sd-sidebar--open' : ''}`}>
       <div className="sd-sidebar__head">
         <div className="sd-sidebar__logo-mark">
-          <PiCircuitry />
+          <img src={logo} alt="PRMES Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
         </div>
         <div className="sd-sidebar__brand-text">
           <span className="sd-sidebar__brand-title">PRMES</span>
@@ -81,9 +90,23 @@ export default function StudentSidebar({
       </nav>
 
       <div className="sd-sidebar__footer">
-        <div className="sd-user-mini">
-          <div className="sd-avatar">
-            {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'S'}
+        <div
+          className="sd-user-mini"
+          style={{ cursor: 'pointer' }}
+          onClick={onOpenEditProfile}
+          title="Click to edit profile"
+        >
+          <div className="sd-avatar" style={{ overflow: 'hidden' }}>
+            {user?.profile_photo && !imgError ? (
+              <img
+                src={getProfilePhotoUrl(user.profile_photo)}
+                alt={user.full_name || 'Profile'}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'S'
+            )}
           </div>
           <div className="sd-user-mini__info">
             <span className="sd-user-mini__name">{user?.full_name || 'Student Name'}</span>

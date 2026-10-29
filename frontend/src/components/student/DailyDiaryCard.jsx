@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PiBookBookmark, PiPlusBold, PiPencilSimple, PiTrash, PiX, PiCheckCircle, PiClock, PiWarningCircle, PiCalendarBlank } from 'react-icons/pi';
-import { fetchStudentDiary, createDiaryEntry, updateDiaryEntry, deleteDiaryEntry } from '../../services/api';
+import { fetchStudentDiary, createDiaryEntry, updateDiaryEntry, deleteDiaryEntry, getProfilePhotoUrl } from '../../services/api';
 
 export default function DailyDiaryCard({ user, onDiaryUpdated }) {
   const [entries, setEntries] = useState([]);
@@ -189,80 +189,124 @@ export default function DailyDiaryCard({ user, onDiaryUpdated }) {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {entries.map((entry) => (
-            <div
-              key={entry.id}
-              style={{
-                padding: '16px',
-                borderRadius: 'var(--radius-sm)',
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border-hairline)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '10px'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {entries.map((entry) => {
+            const isAuthor = Boolean(
+              user && (
+                entry.student_id === user.id ||
+                (entry.student_email && user.email && entry.student_email.toLowerCase() === user.email.toLowerCase()) ||
+                (entry.student_usn && user.usn && entry.student_usn.toUpperCase() === user.usn.toUpperCase())
+              )
+            );
+
+            const authorRole = entry.student_role || (entry.student_name && entry.student_name.includes('Leader') ? 'TEAM LEADER' : 'TEAM MEMBER');
+            const isLeaderRole = authorRole === 'TEAM LEADER';
+
+            return (
+              <div
+                key={entry.id}
+                style={{
+                  padding: '16px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-hairline)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}
+              >
+                {/* 1. Author Header & Metadata Bar */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div className="sd-avatar" style={{ width: 38, height: 38, fontSize: 15, overflow: 'hidden' }}>
+                      {entry.profile_photo ? (
+                        <img
+                          src={getProfilePhotoUrl(entry.profile_photo)}
+                          alt={entry.student_name || 'Author'}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        entry.student_name ? entry.student_name.charAt(0).toUpperCase() : 'S'
+                      )}
+                    </div>
+
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: 700, fontSize: '14.5px', color: 'var(--text-primary)' }}>
+                          {entry.student_name || 'Team Student'}
+                        </span>
+                        <span className={`sd-role-badge ${isLeaderRole ? 'sd-role-badge--leader' : 'sd-role-badge--member'}`}>
+                          {isLeaderRole ? 'TEAM LEADER' : 'TEAM MEMBER'}
+                        </span>
+                      </div>
+                      {entry.student_usn && (
+                        <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          USN: {entry.student_usn}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Category & Work Duration Pill */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <span className="sd-doc-status-pill sd-doc-status-pill--approved" style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
                       {entry.work_category}
                     </span>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {entry.date}
-                    </span>
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                      • {entry.hours_worked} {entry.hours_worked === 1 ? 'hour' : 'hours'}
+                    <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                      {entry.date} • {entry.hours_worked} {entry.hours_worked === 1 ? 'hour' : 'hours'}
                     </span>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {/* 2. Today's Work Description */}
+                <div style={{ fontSize: '13.5px', color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap', background: 'var(--bg-canvas)', padding: '12px 14px', borderRadius: '4px', border: '1px solid var(--border-hairline)' }}>
+                  <strong style={{ color: 'var(--accent-cyan)' }}>Today&apos;s Work:</strong> {entry.work_description}
+                </div>
+
+                {/* Challenges / Blockers */}
+                {entry.challenges && (
+                  <div style={{ fontSize: '12.5px', color: '#ff9f43', background: 'rgba(255, 159, 67, 0.08)', padding: '8px 12px', borderRadius: '4px', border: '1px solid rgba(255, 159, 67, 0.2)' }}>
+                    ⚠️ <strong>Challenges / Blockers:</strong> {entry.challenges}
+                  </div>
+                )}
+
+                {/* Tomorrow's Plan */}
+                {entry.tomorrow_plan && (
+                  <div style={{ fontSize: '12.5px', color: 'var(--text-secondary)', background: 'var(--bg-canvas)', padding: '8px 12px', borderRadius: '4px', border: '1px solid var(--border-hairline)' }}>
+                    🎯 <strong>Tomorrow&apos;s Plan:</strong> {entry.tomorrow_plan}
+                  </div>
+                )}
+
+                {/* 3. Footer: Status Pill + Author-Only Action Controls */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
                   <span className={`sd-urgency-pill ${entry.status === 'Completed' ? 'sd-doc-status-pill--approved' : entry.status === 'Blocked' ? 'sd-urgency-pill--overdue' : 'sd-urgency-pill--approaching'}`}>
                     {entry.status}
                   </span>
 
-                  {/* Edit/Delete available strictly for owner */}
-                  {user && (entry.student_id === user.id || !entry.student_id) && (
-                    <>
+                  {/* Edit / Delete available strictly ONLY for entry author */}
+                  {isAuthor && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <button
                         className="sd-btn sd-btn-outline"
-                        style={{ padding: '4px 8px', fontSize: '11.5px' }}
+                        style={{ padding: '4px 10px', fontSize: '11.5px' }}
                         onClick={() => handleOpenEdit(entry)}
-                        title="Edit Entry"
+                        title="Edit My Diary Entry"
                       >
                         <PiPencilSimple /> Edit
                       </button>
                       <button
                         className="sd-btn sd-btn-outline"
-                        style={{ padding: '4px 8px', fontSize: '11.5px', color: '#ff6259', borderColor: 'rgba(255, 98, 89, 0.4)' }}
+                        style={{ padding: '4px 10px', fontSize: '11.5px', color: '#ff6259', borderColor: 'rgba(255, 98, 89, 0.4)' }}
                         onClick={() => setEntryToDelete(entry)}
-                        title="Delete Entry"
+                        title="Delete My Diary Entry"
                       >
                         <PiTrash /> Delete
                       </button>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
-
-              <div style={{ fontSize: '13.5px', color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                <strong>Today&apos;s Work:</strong> {entry.work_description}
-              </div>
-
-              {entry.challenges && (
-                <div style={{ fontSize: '12.5px', color: '#ff9f43', background: 'rgba(255, 159, 67, 0.08)', padding: '8px 12px', borderRadius: '4px', border: '1px solid rgba(255, 159, 67, 0.2)' }}>
-                  ⚠️ <strong>Challenges / Blockers:</strong> {entry.challenges}
-                </div>
-              )}
-
-              {entry.tomorrow_plan && (
-                <div style={{ fontSize: '12.5px', color: 'var(--text-secondary)', background: 'var(--bg-canvas)', padding: '8px 12px', borderRadius: '4px', border: '1px solid var(--border-hairline)' }}>
-                  🎯 <strong>Tomorrow&apos;s Plan:</strong> {entry.tomorrow_plan}
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

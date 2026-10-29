@@ -2,13 +2,13 @@ import { motion } from 'framer-motion';
 
 export default function AdminStats({ stats }) {
   const STAT_ITEMS = [
-    { label: 'Total Students', value: stats?.students ?? 0, icon: '🎓' },
-    { label: 'Active Faculty', value: stats?.faculty ?? 0, icon: '👨‍🏫' },
-    { label: 'Coordinators', value: stats?.coordinators ?? 0, icon: '👔' },
-    { label: 'Project Teams', value: stats?.teams ?? 0, icon: '👥' },
+    { label: 'Total Students', value: stats?.totalStudents ?? stats?.students ?? 0, icon: '🎓' },
+    { label: 'Total Guides', value: stats?.totalGuides ?? stats?.faculty ?? 0, icon: '👨‍🏫' },
+    { label: 'Total Coordinators', value: stats?.totalCoordinators ?? stats?.coordinators ?? 0, icon: '👔' },
+    { label: 'Total Teams', value: stats?.totalTeams ?? stats?.teams ?? 0, icon: '👥' },
     { label: 'Active Projects', value: stats?.activeProjects ?? 0, icon: '⚡' },
-    { label: 'Guides Assigned', value: stats?.guidesAssigned ?? 0, icon: '✅' },
-    { label: 'Pending Allocations', value: stats?.pendingAllocations ?? 0, icon: '⏳' },
+    { label: 'Pending Guide Allocations', value: stats?.pendingAllocations ?? 0, icon: '⏳' },
+    { label: 'Upcoming Reviews', value: stats?.upcomingReviews ?? 0, icon: '📅' },
     { label: 'Pending Evaluations', value: stats?.pendingEvaluations ?? 0, icon: '📊' },
   ];
 

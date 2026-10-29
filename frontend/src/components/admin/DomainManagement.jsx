@@ -1,72 +1,75 @@
-import { useState } from 'react';
-import { PiGridFour, PiPlusBold, PiPencilSimple, PiXCircle } from 'react-icons/pi';
+import { useState, useEffect } from 'react';
+import { PiGridFour } from 'react-icons/pi';
+import { FIXED_PROJECT_DOMAINS } from '../../constants/domains';
+import { fetchAdminDomainStats } from '../../services/api';
 
-export default function DomainManagement() {
-  const [domains, setDomains] = useState([
-    { id: '1', name: 'Artificial Intelligence & Machine Learning', desc: 'Deep learning, computer vision, NLP, and predictive intelligent models.', teams: 14, guides: 6, status: 'Active' },
-    { id: '2', name: 'Web Development', desc: 'Modern full-stack web applications, microservices, and performance.', teams: 10, guides: 5, status: 'Active' },
-    { id: '3', name: 'Data Science', desc: 'Big data processing, analytics, data visualization, and statistical learning.', teams: 8, guides: 4, status: 'Active' },
-    { id: '4', name: 'Cyber Security', desc: 'Network security, cryptography, vulnerability testing, and secure protocols.', teams: 6, guides: 3, status: 'Active' },
-    { id: '5', name: 'Cloud Computing', desc: 'Distributed systems, serverless architectures, AWS/Azure, and DevOps.', teams: 5, guides: 4, status: 'Active' },
-    { id: '6', name: 'IoT', desc: 'Smart embedded systems, sensors, robotics, and hardware automation.', teams: 5, guides: 3, status: 'Active' },
-    { id: '7', name: 'Mobile Application Development', desc: 'Native & cross-platform mobile apps for Android & iOS.', teams: 4, guides: 3, status: 'Active' },
-    { id: '8', name: 'Software Engineering', desc: 'Enterprise architecture, design patterns, testing frameworks, and agile.', teams: 4, guides: 3, status: 'Active' },
-  ]);
+export default function DomainManagement({ adminUser }) {
+  const [domainStats, setDomainStats] = useState(() =>
+    FIXED_PROJECT_DOMAINS.map((domainName) => ({
+      id: domainName.toLowerCase().replace(/\s+/g, '_'),
+      name: domainName,
+      domain: domainName,
+      teamsCount: 0,
+      status: 'Active'
+    }))
+  );
+  const [loading, setLoading] = useState(false);
 
-  const handleAddDomain = () => {
-    const name = prompt('Enter new project domain name:');
-    if (name) {
-      setDomains([...domains, { id: String(Date.now()), name, desc: 'Custom project domain.', teams: 0, guides: 2, status: 'Active' }]);
-    }
-  };
+  useEffect(() => {
+    const loadDomainStats = async () => {
+      try {
+        setLoading(true);
+        const email = adminUser?.email || adminUser?.student_id;
+        const res = await fetchAdminDomainStats(email);
+        if (res && res.success && res.domain_stats) {
+          setDomainStats(res.domain_stats);
+        }
+      } catch (err) {
+        console.error('Failed to load real domain stats:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadDomainStats();
+  }, [adminUser]);
 
   return (
     <div className="ad-card" id="domains">
       <div className="ad-card__head">
         <h2 className="ad-card__title">
-          <PiGridFour className="ad-card__title-icon" /> Academic Project Domains Management
+          <PiGridFour className="ad-card__title-icon" /> Academic Project Domains &amp; Real Team Distribution
         </h2>
-        <button
-          className="gd-btn gd-btn-primary"
-          style={{ padding: '6px 14px', fontSize: '12.5px' }}
-          onClick={handleAddDomain}
-        >
-          <PiPlusBold /> Add New Domain
-        </button>
+        <span className="sd-welcome-card__status-pill">
+          {FIXED_PROJECT_DOMAINS.length} Predefined System Domains
+        </span>
       </div>
 
       <div className="cd-table-container">
         <table className="cd-table">
           <thead>
             <tr>
-              <th>Domain Name</th>
-              <th>Description</th>
-              <th>Registered Teams</th>
-              <th>Available Specialization Guides</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th style={{ width: '40px' }}>#</th>
+              <th>Predefined Domain Name</th>
+              <th>Registered Teams (Real MySQL Count)</th>
+              <th>Allocation Status</th>
             </tr>
           </thead>
           <tbody>
-            {domains.map((d) => (
-              <tr key={d.id}>
-                <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{d.name}</td>
-                <td style={{ color: 'var(--text-secondary)', maxWidth: 300, whiteSpace: 'normal' }}>{d.desc}</td>
-                <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--accent-cyan)' }}>{d.teams} Teams</td>
-                <td style={{ fontFamily: 'var(--font-mono)' }}>{d.guides} Faculty</td>
-                <td>
-                  <span className="sd-doc-status-pill sd-doc-status-pill--approved">{d.status} ✓</span>
+            {domainStats.map((d, index) => (
+              <tr key={d.name || d.domain}>
+                <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+                  {index + 1}
+                </td>
+                <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {d.name || d.domain}
+                </td>
+                <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: d.teamsCount > 0 ? 'var(--accent-cyan)' : 'var(--text-muted)' }}>
+                  {d.teamsCount ?? d.teams ?? 0} Teams
                 </td>
                 <td>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button
-                      className="gd-btn gd-btn-outline"
-                      style={{ padding: '3px 8px', fontSize: '11.5px' }}
-                      onClick={() => alert(`Editing domain ${d.name}`)}
-                    >
-                      <PiPencilSimple /> Edit
-                    </button>
-                  </div>
+                  <span className="sd-doc-status-pill sd-doc-status-pill--approved">
+                    Active System Option ✓
+                  </span>
                 </td>
               </tr>
             ))}

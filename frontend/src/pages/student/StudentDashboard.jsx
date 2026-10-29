@@ -18,6 +18,8 @@ import TodayProgressCard from '../../components/student/TodayProgressCard';
 import DailyDiaryCard from '../../components/student/DailyDiaryCard';
 import RegisterTeamModal from '../../components/student/RegisterTeamModal';
 import SelectDomainModal from '../../components/student/SelectDomainModal';
+import EditProfileModal from '../../components/student/EditProfileModal';
+import ProjectSimilarityModal from '../../components/student/ProjectSimilarityModal';
 
 import {
   fetchStudentDashboard,
@@ -49,7 +51,9 @@ export default function StudentDashboard() {
   const [team, setTeam] = useState(null);
   const [domain, setDomain] = useState(null);
   const [guide, setGuide] = useState(null);
+  const [allocation, setAllocation] = useState(null);
   const [documents, setDocuments] = useState([]);
+  const [reviews, setReviews] = useState(null);
   const [review1, setReview1] = useState(null);
   const [review2, setReview2] = useState(null);
   const [stageIndex, setStageIndex] = useState(0);
@@ -69,6 +73,8 @@ export default function StudentDashboard() {
   // 5. Modal States
   const [isRegisterTeamOpen, setIsRegisterTeamOpen] = useState(false);
   const [isSelectDomainOpen, setIsSelectDomainOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isSimilarityModalOpen, setIsSimilarityModalOpen] = useState(false);
 
   const loadDashboardData = async () => {
     const currentUser = user || JSON.parse(localStorage.getItem('prmes_user') || '{}');
@@ -78,7 +84,9 @@ export default function StudentDashboard() {
       if (dbData.team) setTeam(dbData.team);
       if (dbData.domain) setDomain(dbData.domain);
       if (dbData.guide) setGuide(dbData.guide);
+      if (dbData.allocation) setAllocation(dbData.allocation);
       if (dbData.documents) setDocuments(dbData.documents);
+      if (dbData.reviews) setReviews(dbData.reviews);
       if (dbData.review1) setReview1(dbData.review1);
       if (dbData.review2) setReview2(dbData.review2);
       if (typeof dbData.stage_index === 'number') setStageIndex(dbData.stage_index);
@@ -105,10 +113,11 @@ export default function StudentDashboard() {
     setStageIndex(1);
   };
 
-  const handleDomainSelected = (newDomain) => {
+  const handleDomainSelected = async (newDomain) => {
     setDomain(newDomain);
     if (team) setTeam({ ...team, domain: newDomain });
     setStageIndex(2);
+    await loadDashboardData();
   };
 
   const handleNotificationRead = (id, updatedList) => {
@@ -125,6 +134,7 @@ export default function StudentDashboard() {
   };
 
   const isUnassignedStudent = !team && user?.role === 'STUDENT';
+  const isLeader = user?.role === 'TEAM_LEADER' || (team && user && team.leader_id === user.id);
 
   return (
     <div className="sd-layout">
@@ -140,6 +150,7 @@ export default function StudentDashboard() {
         isOpen={mobileSidebarOpen}
         onClose={() => setMobileSidebarOpen(false)}
         unreadCount={unreadCount}
+        onOpenEditProfile={() => setIsEditProfileOpen(true)}
       />
 
       {/* Main Workspace */}
@@ -153,6 +164,7 @@ export default function StudentDashboard() {
             setActiveTab('notifications');
             document.getElementById('notifications')?.scrollIntoView({ behavior: 'smooth' });
           }}
+          onOpenEditProfile={() => setIsEditProfileOpen(true)}
         />
 
         <div className="sd-content">
@@ -279,7 +291,7 @@ export default function StudentDashboard() {
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}>
-              <GuideCard guide={guide} />
+              <GuideCard guide={guide} allocation={allocation} domain={domain || team?.domain} isLeader={isLeader} />
             </motion.div>
           </div>
 
@@ -290,24 +302,34 @@ export default function StudentDashboard() {
 
           {/* Project Domain Selection */}
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.35 }}>
-            <DomainCard selectedDomain={domain || team?.domain} onOpenSelectDomain={() => setIsSelectDomainOpen(true)} />
-          </motion.div>
-
-          {/* Documents Section */}
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
-            <DocumentsCard
-              documents={documents}
-              review1Status={review1?.status || 'OPEN'}
-              teamId={team?.team_id}
-              studentId={user?.student_id}
-              onRefreshDocuments={loadDashboardData}
+            <DomainCard
+              selectedDomain={domain || team?.domain}
+              onOpenSelectDomain={() => setIsSelectDomainOpen(true)}
+              onOpenSimilarityModal={() => setIsSimilarityModalOpen(true)}
+              isLeader={isLeader}
             />
           </motion.div>
+
+          {/* Documents Section (Team Leader Only) */}
+          {isLeader && (
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
+              <DocumentsCard
+                documents={documents}
+                reviews={reviews}
+                teamId={team?.team_id}
+                studentId={user?.student_id}
+                user={user}
+                isLeader={isLeader}
+                onRefreshDocuments={loadDashboardData}
+                onOpenRegisterTeam={() => setIsRegisterTeamOpen(true)}
+              />
+            </motion.div>
+          )}
 
           {/* 2-Column Grid: Reviews & Dynamic Upcoming */}
           <div className="sd-grid-2-1">
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.45 }}>
-              <ReviewsCard reviews={null} review1={review1} review2={review2} />
+              <ReviewsCard reviews={reviews} user={user} />
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5 }}>
@@ -339,6 +361,31 @@ export default function StudentDashboard() {
         onClose={() => setIsSelectDomainOpen(false)}
         currentDomain={domain || team?.domain}
         onDomainSelected={handleDomainSelected}
+        user={user}
+        team={team}
+      />
+
+      <EditProfileModal
+        isOpen={isEditProfileOpen}
+        onClose={() => setIsEditProfileOpen(false)}
+        user={user}
+        onProfileUpdated={(updatedUser) => {
+          setUser(updatedUser);
+          localStorage.setItem('prmes_user', JSON.stringify(updatedUser));
+        }}
+      />
+
+      <ProjectSimilarityModal
+        isOpen={isSimilarityModalOpen}
+        onClose={() => setIsSimilarityModalOpen(false)}
+        currentTitle={team?.title || ''}
+        currentDomain={domain || team?.domain || ''}
+        user={user}
+        team={team}
+        onSimilarityPassed={({ title: checkedTitle, domain: checkedDomain }) => {
+          setIsSimilarityModalOpen(false);
+          setIsSelectDomainOpen(true);
+        }}
       />
     </div>
   );

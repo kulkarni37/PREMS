@@ -1,13 +1,7 @@
 import { PiCalendar, PiClock, PiWarningCircle, PiCheckCircle } from 'react-icons/pi';
 
-export default function ReviewCalendarCard() {
-  const TIMELINE_EVENTS = [
-    { id: 1, title: 'Review 1 Synopsis Deadline', date: '12 Sept 2026', type: 'Deadline', status: 'Approaching' },
-    { id: 2, title: 'Review 1 Panel Defense (Batch A)', date: '20 Sept 2026', type: 'Review Stage', status: 'Scheduled' },
-    { id: 3, title: 'Review 1 Panel Defense (Batch B)', date: '22 Sept 2026', type: 'Review Stage', status: 'Scheduled' },
-    { id: 4, title: 'Review 1 Marks Entry Deadline', date: '28 Sept 2026', type: 'Evaluation', status: 'Upcoming' },
-    { id: 5, title: 'Review 2 Synopsis & Progress', date: '15 Oct 2026', type: 'Review Stage', status: 'Upcoming' },
-  ];
+export default function ReviewCalendarCard({ events = [] }) {
+  const list = Array.isArray(events) ? events : [];
 
   return (
     <div className="cd-card">
@@ -17,24 +11,36 @@ export default function ReviewCalendarCard() {
         </h2>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {TIMELINE_EVENTS.map((evt) => (
-          <div key={evt.id} className="sd-deadline-item">
-            <div>
-              <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>
-                {evt.title}
+      {list.length === 0 ? (
+        <div className="gd-empty-state">
+          <div className="gd-empty-state__icon"><PiCalendar /></div>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 600, margin: 0 }}>
+            No calendar events or deadlines scheduled.
+          </h3>
+          <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+            Department academic schedule and submission deadlines will appear here once announced.
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {list.map((evt) => (
+            <div key={evt.id} className="sd-deadline-item">
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>
+                  {evt.title}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <PiClock /> {evt.date} • <strong style={{ color: 'var(--accent-cyan)' }}>{evt.type}</strong>
+                </div>
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <PiClock /> {evt.date} • <strong style={{ color: 'var(--accent-cyan)' }}>{evt.type}</strong>
-              </div>
-            </div>
 
-            <span className={`sd-urgency-pill ${evt.status === 'Approaching' ? 'sd-urgency-pill--approaching' : 'sd-urgency-pill--normal'}`}>
-              {evt.status}
-            </span>
-          </div>
-        ))}
-      </div>
+              <span className={`sd-urgency-pill ${evt.status === 'Approaching' ? 'sd-urgency-pill--approaching' : 'sd-urgency-pill--normal'}`}>
+                {evt.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

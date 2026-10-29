@@ -1,10 +1,42 @@
 from flask import Blueprint, request, jsonify
 from database.db import db
-from models import User, Team, TeamMember, DocumentSubmission, ReviewStatus, Notification, DailyDiary, Institution, Department
+from models import User, Team, TeamMember, DocumentSubmission, ReviewStatus, Notification, DailyDiary, Institution, Department, GuideAllocation
+from services.guide_allocation_service import allocate_guide_for_team
 from datetime import datetime, date as date_cls, timezone
 import os
+from constants.domains import FIXED_PROJECT_DOMAINS
 
 student_bp = Blueprint('student', __name__, url_prefix='/api/student')
+
+@student_bp.route('/check-similarity', methods=['POST'])
+def check_similarity():
+    """
+    POST /api/student/check-similarity
+    Analyzes proposed project title against 5-year Past Project Repository in MySQL DB.
+    """
+    data = request.get_json() or {}
+    title = data.get('title', '').strip()
+    threshold = float(data.get('threshold', 40.0))
+
+    if not title:
+        return jsonify({'success': False, 'message': 'Project title is required for similarity analysis.'}), 400
+
+    from services.past_project_service import check_project_similarity
+    result = check_project_similarity(title, threshold=threshold)
+
+    return jsonify({
+        'success': True,
+        'proposed_title': title,
+        'is_similar': result['is_similar'],
+        'threshold': result['threshold'],
+        'count': len(result['matches']),
+        'matches': result['matches'],
+        'message': (
+            "Your proposed project appears similar to one or more projects in the previous project repository. Please consider a different project idea or a substantially different approach."
+            if result['is_similar']
+            else "No sufficiently similar project was found in the available 5-year project repository."
+        )
+    }), 200
 
 def verify_team_leader_ownership(identifier):
     """
@@ -34,7 +66,7 @@ def verify_team_leader_ownership(identifier):
         team = lead_membership.team_obj
 
     if not team:
-        return None, None, (jsonify({'success': False, 'message': 'No project team associated with your account.'}), 404)
+        return None, None, (jsonify({'success': False, 'message': 'No project team associated with your account. Please register your project team first.'}), 404)
 
     # Authorized if team.leader_id == leader.id OR leader.role in ['TEAM_LEADER', 'ADMIN'] OR lead_membership is LEADER
     is_authorized = (
@@ -52,6 +84,88 @@ def verify_team_leader_ownership(identifier):
         db.session.commit()
 
     return leader, team, None
+
+ALLOWED_DOC_TYPES = {
+    'Synopsis': (1, 1),
+    'Phase1_Report': (1, 2),
+    'Review1_Report': (1, 2),
+    'Project_Report': (1, 2),
+    'Phase1_PPT': (1, 2),
+    'Review1_PPT': (1, 2),
+    'Project_PPT': (1, 2),
+    'Phase2_Review1_PPT': (2, 1),
+    'Phase2_PPT': (2, 1),
+    'Final_Project_Report': (2, 2),
+    'Phase2_Final_Report': (2, 2),
+    'Final_Report': (2, 2),
+    'Final_Project_PPT': (2, 2),
+    'Phase2_Final_PPT': (2, 2),
+    'Final_PPT': (2, 2)
+}
+
+def get_team_review_statuses(team_id):
+    """
+    Ensures exactly 4 review status records exist for the team in MySQL DB:
+    - Phase 1 Review 1 (P1R1): OPEN initially
+    - Phase 1 Review 2 (P1R2): LOCKED initially
+    - Phase 2 Review 1 (P2R1): LOCKED initially
+    - Phase 2 Review 2 (P2R2): LOCKED initially
+
+    Enforces locking progression:
+    - P1R2 unlocks ONLY when P1R1 status is 'COMPLETED' or 'APPROVED'.
+    - P2R1 unlocks ONLY when P1R2 status is 'COMPLETED' or 'APPROVED'.
+    - P2R2 unlocks ONLY when P2R1 status is 'COMPLETED' or 'APPROVED'.
+    """
+    reviews = ReviewStatus.query.filter_by(team_id=team_id).all()
+    review_map = {}
+    for r in reviews:
+        p = getattr(r, 'phase_number', 1) or 1
+        num = r.review_number
+        review_map[(p, num)] = r
+
+    needed = [(1, 1), (1, 2), (2, 1), (2, 2)]
+    created_any = False
+    for p, num in needed:
+        if (p, num) not in review_map:
+            init_status = 'OPEN' if (p == 1 and num == 1) else 'LOCKED'
+            r_new = ReviewStatus(
+                team_id=team_id,
+                phase_number=p,
+                review_number=num,
+                status=init_status,
+                current_attempt=1
+            )
+            db.session.add(r_new)
+            review_map[(p, num)] = r_new
+            created_any = True
+
+    if created_any:
+        db.session.commit()
+
+    # Dynamic unlock synchronization
+    p1r1 = review_map.get((1, 1))
+    p1r2 = review_map.get((1, 2))
+    p2r1 = review_map.get((2, 1))
+    p2r2 = review_map.get((2, 2))
+
+    changed = False
+
+    if p1r1 and p1r1.status in ['COMPLETED', 'APPROVED'] and p1r2 and p1r2.status == 'LOCKED':
+        p1r2.status = 'OPEN'
+        changed = True
+
+    if p1r2 and p1r2.status in ['COMPLETED', 'APPROVED'] and p2r1 and p2r1.status == 'LOCKED':
+        p2r1.status = 'OPEN'
+        changed = True
+
+    if p2r1 and p2r1.status in ['COMPLETED', 'APPROVED'] and p2r2 and p2r2.status == 'LOCKED':
+        p2r2.status = 'OPEN'
+        changed = True
+
+    if changed:
+        db.session.commit()
+
+    return review_map
 
 @student_bp.route('/dashboard', methods=['GET'])
 def get_dashboard():
@@ -96,23 +210,48 @@ def get_dashboard():
             db.session.commit()
 
     guide = None
+    allocation = None
+    if team:
+        alloc_obj = GuideAllocation.query.filter_by(team_id=team.id).first()
+        if alloc_obj:
+            allocation = alloc_obj.to_dict()
+
     if team and team.guide_id:
         guide_user = User.query.get(team.guide_id)
         if guide_user:
             guide = guide_user.to_dict()
+            if allocation and allocation.get('matched_preference'):
+                guide['matched_preference'] = allocation['matched_preference']
 
     documents = []
     if team:
         docs = DocumentSubmission.query.filter_by(team_id=team.id).all()
         documents = [d.to_dict() for d in docs]
 
-    review1 = None
-    review2 = None
+    from models import StudentReviewMark
+
+    review_map = get_team_review_statuses(team.id) if team else {}
+    user_marks = {}
     if team:
-        r1 = ReviewStatus.query.filter_by(team_id=team.id, review_number=1).first()
-        r2 = ReviewStatus.query.filter_by(team_id=team.id, review_number=2).first()
-        if r1: review1 = r1.to_dict()
-        if r2: review2 = r2.to_dict()
+        st_marks = StudentReviewMark.query.filter_by(student_id=user.id, team_id=team.id).all()
+        for sm in st_marks:
+            user_marks[(sm.phase_number, sm.review_number)] = {
+                'marks_obtained': sm.marks_obtained,
+                'max_marks': sm.max_marks
+            }
+
+    reviews_data = {}
+    key_map = {(1, 1): 'p1r1', (1, 2): 'p1r2', (2, 1): 'p2r1', (2, 2): 'p2r2'}
+    for k, label in key_map.items():
+        if k in review_map and review_map[k]:
+            r_dict = review_map[k].to_dict()
+            if k in user_marks:
+                r_dict['marks'] = user_marks[k]['marks_obtained']
+                r_dict['marks_obtained'] = user_marks[k]['marks_obtained']
+                r_dict['max_marks'] = user_marks[k]['max_marks']
+            reviews_data[label] = r_dict
+        else:
+            reviews_data[label] = None
 
     notifications = Notification.query.filter_by(user_id=user.id).order_by(Notification.created_at.desc()).all()
 
@@ -126,19 +265,21 @@ def get_dashboard():
         elif not team.guide_id:
             stage_index = 2
         else:
-            proposal_doc = next((d for d in documents if d['doc_type'] == 'Proposal'), None)
-            synopsis_doc = next((d for d in documents if d['doc_type'] == 'Synopsis'), None)
-            if not proposal_doc:
+            p1r1 = review_map.get((1, 1))
+            p1r2 = review_map.get((1, 2))
+            p2r1 = review_map.get((2, 1))
+            p2r2 = review_map.get((2, 2))
+
+            if not p1r1 or p1r1.status not in ['COMPLETED', 'APPROVED']:
                 stage_index = 3
-            elif not synopsis_doc:
+            elif not p1r2 or p1r2.status not in ['COMPLETED', 'APPROVED']:
                 stage_index = 4
+            elif not p2r1 or p2r1.status not in ['COMPLETED', 'APPROVED']:
+                stage_index = 5
+            elif not p2r2 or p2r2.status not in ['COMPLETED', 'APPROVED']:
+                stage_index = 6
             else:
-                if not review1 or review1['status'] != 'COMPLETED':
-                    stage_index = 5
-                elif not review2 or review2['status'] != 'COMPLETED':
-                    stage_index = 6
-                elif review2 and review2['status'] == 'COMPLETED':
-                    stage_index = 7
+                stage_index = 7
 
     return jsonify({
         'success': True,
@@ -146,9 +287,13 @@ def get_dashboard():
         'team': team.to_dict() if team else None,
         'domain': team.domain if team else None,
         'guide': guide,
+        'allocation': allocation,
         'documents': documents,
-        'review1': review1,
-        'review2': review2,
+        'reviews': reviews_data,
+        'review1': reviews_data['p1r1'],
+        'review2': reviews_data['p1r2'],
+        'review2_1': reviews_data['p2r1'],
+        'review2_2': reviews_data['p2r2'],
         'stage_index': stage_index,
         'notifications': [n.to_dict() for n in notifications],
         'today_diary': today_diary.to_dict() if today_diary else None
@@ -272,10 +417,11 @@ def register_team():
         tm = TeamMember(team_id=team.id, user_id=member_user.id, role_in_team='MEMBER')
         db.session.add(tm)
 
-    r1 = ReviewStatus(team_id=team.id, review_number=1, status='OPEN', current_attempt=1)
-    r2 = ReviewStatus(team_id=team.id, review_number=2, status='LOCKED', current_attempt=1)
-    db.session.add(r1)
-    db.session.add(r2)
+    r1_1 = ReviewStatus(team_id=team.id, phase_number=1, review_number=1, status='OPEN', current_attempt=1)
+    r1_2 = ReviewStatus(team_id=team.id, phase_number=1, review_number=2, status='LOCKED', current_attempt=1)
+    r2_1 = ReviewStatus(team_id=team.id, phase_number=2, review_number=1, status='LOCKED', current_attempt=1)
+    r2_2 = ReviewStatus(team_id=team.id, phase_number=2, review_number=2, status='LOCKED', current_attempt=1)
+    db.session.add_all([r1_1, r1_2, r2_1, r2_2])
 
     for user_obj in [leader] + resolved_users:
         notif = Notification(
@@ -313,6 +459,11 @@ def edit_team():
         team.title = title
 
     if domain:
+        if domain not in FIXED_PROJECT_DOMAINS:
+            return jsonify({
+                'success': False,
+                'message': f"Invalid domain '{domain}'. Please select one of the predefined project domains."
+            }), 400
         if team.guide_id:
             return jsonify({
                 'success': False,
@@ -476,73 +627,107 @@ def select_domain():
     data = request.get_json() or {}
     team_id_str = data.get('teamId', '')
     domain_name = data.get('domain', '').strip()
+    leader_email = data.get('leaderEmail', '').strip() or data.get('email', '').strip() or data.get('student_id', '').strip()
+    user_id = data.get('user_id')
 
-    if not team_id_str or not domain_name:
-        return jsonify({'success': False, 'message': 'Team ID and Domain name are required.'}), 400
+    if not domain_name:
+        return jsonify({'success': False, 'message': 'Domain name is required.'}), 400
 
-    team = Team.query.filter_by(team_id=team_id_str).first()
+    if domain_name not in FIXED_PROJECT_DOMAINS:
+        return jsonify({
+            'success': False,
+            'message': f"Invalid domain '{domain_name}'. Please select one of the predefined project domains."
+        }), 400
+
+    leader = None
+    team = None
+
+    if leader_email or user_id:
+        leader, team, err = verify_team_leader_ownership(leader_email or user_id)
+        if err:
+            return err[0], err[1]
+    elif team_id_str:
+        team = Team.query.filter_by(team_id=team_id_str).first()
+        if not team:
+            return jsonify({'success': False, 'message': 'Team record not found.'}), 404
+        return jsonify({'success': False, 'message': 'Team Leader identification required to select project domain.'}), 403
+    else:
+        return jsonify({'success': False, 'message': 'Team Leader identification required.'}), 400
+
     if not team:
         return jsonify({'success': False, 'message': 'Team record not found.'}), 404
 
+    # Save domain selection
     team.domain = domain_name
-    team.current_stage = 'Guide Allocation'
 
-    for member in team.members:
-        notif = Notification(
-            user_id=member.user_id,
-            team_id=team.id,
-            title="Project Domain Selected",
-            message=f"Project domain set to '{domain_name}'. Guide allocation is now pending."
-        )
-        db.session.add(notif)
+    # Trigger Server-Side Automatic Guide Allocation System
+    alloc_res = allocate_guide_for_team(team, domain_name)
 
     db.session.commit()
 
     return jsonify({
         'success': True,
-        'message': f"Domain '{domain_name}' selected successfully!",
-        'team': team.to_dict()
+        'message': alloc_res.get('message', f"Domain '{domain_name}' selected successfully!"),
+        'team': team.to_dict(),
+        'allocated': alloc_res.get('allocated', False),
+        'guide': alloc_res.get('guide'),
+        'matched_preference': alloc_res.get('matched_preference')
     }), 200
 
 @student_bp.route('/documents/upload', methods=['POST'])
 def upload_document():
-    doc_type = request.form.get('doc_type', '')
+    doc_type = request.form.get('doc_type', '').strip()
     team_id_str = request.form.get('team_id', '')
     student_id = request.form.get('student_id', '')
+    user_email = (request.form.get('user_email') or request.form.get('email') or request.form.get('leaderEmail') or '').strip().lower()
 
     file = request.files.get('file')
 
-    if not file or not doc_type or not team_id_str:
-        return jsonify({'success': False, 'message': 'File, Document Type, and Team ID are required.'}), 400
+    if not file or not doc_type:
+        return jsonify({'success': False, 'message': 'File and Document Type are required.'}), 400
 
-    team = Team.query.filter_by(team_id=team_id_str).first()
+    # 1. Strict doc_type validation
+    if doc_type not in ALLOWED_DOC_TYPES:
+        return jsonify({
+            'success': False,
+            'message': f"Invalid document type '{doc_type}'. The ONLY allowed submissions are: Phase 1 Review 1 (Synopsis), Phase 1 Review 2 (Project Report, Project PPT), Phase 2 Review 1 (Project PPT), Phase 2 Review 2 (Final Project Report, Final Project PPT)."
+        }), 400
+
+    # 2. Security: Verify calling user is Team Leader using verify_team_leader_ownership
+    user_identifier = user_email or student_id
+    if not user_identifier:
+        return jsonify({'success': False, 'message': 'Team Leader identification required for document uploads.'}), 400
+
+    leader, team, err = verify_team_leader_ownership(user_identifier)
+    if err:
+        return err[0], err[1]
+
     if not team:
-        return jsonify({'success': False, 'message': 'Team not found.'}), 404
+        return jsonify({'success': False, 'message': 'Project team record not found.'}), 404
 
-    review_num = 0
-    if 'Review1' in doc_type:
-        review_num = 1
-    elif 'Review2' in doc_type:
-        review_num = 2
+    # 3. Stage Locking Validation
+    phase_num, review_num = ALLOWED_DOC_TYPES[doc_type]
+    review_map = get_team_review_statuses(team.id)
+    target_review = review_map.get((phase_num, review_num))
 
-    if review_num == 2:
-        r1 = ReviewStatus.query.filter_by(team_id=team.id, review_number=1).first()
-        if not r1 or r1.status != 'COMPLETED':
-            return jsonify({
-                'success': False,
-                'message': 'Review 2 is LOCKED. You cannot upload Review 2 documents until Review 1 is officially COMPLETED.'
-            }), 403
+    if not target_review or target_review.status == 'LOCKED':
+        return jsonify({
+            'success': False,
+            'message': f"Phase {phase_num} Review {review_num} is LOCKED. You cannot upload documents for this review until the previous review stage is completed and approved by your Guide."
+        }), 403
 
+    # 4. File extension validation
     filename = file.filename
     ext = os.path.splitext(filename)[1].lower()
 
-    if 'PPT' in doc_type:
+    if 'PPT' in doc_type or doc_type.endswith('_PPT'):
         if ext not in ['.ppt', '.pptx']:
             return jsonify({'success': False, 'message': 'PPT documents must be in .ppt or .pptx format.'}), 400
     else:
         if ext not in ['.pdf', '.doc', '.docx']:
             return jsonify({'success': False, 'message': 'Report documents must be in .pdf, .doc, or .docx format.'}), 400
 
+    # 5. Attempts check (max 2 attempts)
     existing_attempts = DocumentSubmission.query.filter_by(
         team_id=team.id,
         doc_type=doc_type
@@ -562,33 +747,42 @@ def upload_document():
             'message': 'Maximum of 2 attempts reached for this review. Submission rejected.'
         }), 400
 
+    # Save physical uploaded file to backend/uploads/<team_id>/<filename>
+    from flask import current_app
+    upload_dir = os.path.join(current_app.root_path, 'uploads', team.team_id)
+    os.makedirs(upload_dir, exist_ok=True)
+    dest_path = os.path.join(upload_dir, filename)
+    file.save(dest_path)
+
     doc_sub = DocumentSubmission(
         team_id=team.id,
         doc_type=doc_type,
         review_number=review_num,
         attempt_number=attempt_num,
         file_name=filename,
-        file_path=f"/uploads/{team_id_str}/{filename}",
+        file_path=f"/uploads/{team.team_id}/{filename}",
         status='SUBMITTED',
         submitted_by=team.leader_id
     )
     db.session.add(doc_sub)
 
-    if review_num in [1, 2]:
-        rev = ReviewStatus.query.filter_by(team_id=team.id, review_number=review_num).first()
-        if rev:
-            rev.status = 'SUBMITTED'
-            rev.current_attempt = attempt_num
+    # Update target review status to SUBMITTED if OPEN
+    if target_review and target_review.status in ['OPEN', 'CHANGES_REQUESTED']:
+        target_review.status = 'SUBMITTED'
+        target_review.current_attempt = attempt_num
 
     db.session.commit()
 
     return jsonify({
         'success': True,
-        'message': f"Document '{filename}' (Attempt {attempt_num} of 2) uploaded successfully!",
+        'message': f"Document '{filename}' (Attempt {attempt_num} of 2) uploaded successfully for Phase {phase_num} Review {review_num}!",
         'document': doc_sub.to_dict()
     }), 201
 
 # ===================================================================
+# DAILY DIARY API ENDPOINTS
+# ===================================================================
+
 # DAILY DIARY API ENDPOINTS
 # ===================================================================
 
@@ -609,26 +803,53 @@ def get_student_diary():
     if not user:
         return jsonify({'success': False, 'message': 'Student record not found.'}), 404
 
-    entries = DailyDiary.query.filter_by(student_id=user.id).order_by(DailyDiary.date.desc(), DailyDiary.created_at.desc()).all()
+    # Get user's project team
+    membership = TeamMember.query.filter_by(user_id=user.id).first()
+    team = membership.team_obj if membership else None
+    if not team:
+        team = Team.query.filter_by(leader_id=user.id).first()
+
+    if team:
+        # Self-repair any unlinked legacy diary entries for team members
+        member_ids = [m.user_id for m in team.members]
+        if member_ids:
+            unlinked = DailyDiary.query.filter(DailyDiary.student_id.in_(member_ids), (DailyDiary.team_id == None) | (DailyDiary.team_id == 0)).all()
+            if unlinked:
+                for un in unlinked:
+                    un.team_id = team.id
+                db.session.commit()
+
+        entries = DailyDiary.query.filter_by(team_id=team.id).order_by(DailyDiary.date.desc(), DailyDiary.created_at.desc()).all()
+    else:
+        entries = DailyDiary.query.filter_by(student_id=user.id).order_by(DailyDiary.date.desc(), DailyDiary.created_at.desc()).all()
+
     return jsonify({
         'success': True,
+        'team_id': team.team_id if team else None,
         'entries': [e.to_dict() for e in entries]
     }), 200
 
 @student_bp.route('/diary', methods=['POST'])
 def create_diary_entry():
     data = request.get_json() or {}
-    email = data.get('user_email', '').strip().lower()
+    email = (data.get('user_email') or data.get('email') or '').strip().lower()
+    student_id_param = data.get('user_id') or data.get('student_id')
     
-    user = User.query.filter((User.email == email) | (User.student_id == email.upper())).first() if email else None
-    if not user:
-        user = User.query.filter_by(role='STUDENT').first()
+    user = None
+    if email:
+        user = User.query.filter((User.email == email) | (User.student_id == email.upper())).first()
+    elif student_id_param:
+        user = User.query.filter((User.id == student_id_param) | (User.student_id == str(student_id_param).upper())).first()
 
     if not user:
         return jsonify({'success': False, 'message': 'Authenticated student not found.'}), 404
 
     membership = TeamMember.query.filter_by(user_id=user.id).first()
-    if not membership:
+    team = membership.team_obj if membership else None
+    if not team:
+        team = Team.query.filter_by(leader_id=user.id).first()
+
+    if not team:
         return jsonify({'success': False, 'message': 'You must belong to a project team to post daily diary entries.'}), 400
 
     entry_date = data.get('date') or datetime.now().strftime('%Y-%m-%d')
@@ -644,7 +865,7 @@ def create_diary_entry():
 
     diary = DailyDiary(
         student_id=user.id,
-        team_id=membership.team_id,
+        team_id=team.id,
         date=entry_date,
         work_category=work_category,
         work_description=work_description,
@@ -665,17 +886,23 @@ def create_diary_entry():
 @student_bp.route('/diary/<int:entry_id>', methods=['PUT'])
 def update_diary_entry(entry_id):
     data = request.get_json() or {}
-    email = data.get('user_email', '').strip().lower()
+    email = (data.get('user_email') or data.get('email') or '').strip().lower()
+    user_id = data.get('user_id')
 
-    user = User.query.filter((User.email == email) | (User.student_id == email.upper())).first() if email else None
+    user = None
+    if email:
+        user = User.query.filter((User.email == email) | (User.student_id == email.upper())).first()
+    elif user_id:
+        user = User.query.get(user_id)
+
     if not user:
-        user = User.query.filter_by(role='STUDENT').first()
+        return jsonify({'success': False, 'message': 'Authenticated user not found.'}), 404
 
     diary = DailyDiary.query.get(entry_id)
     if not diary:
         return jsonify({'success': False, 'message': 'Diary entry not found.'}), 404
 
-    if user and diary.student_id != user.id:
+    if diary.student_id != user.id:
         return jsonify({'success': False, 'message': 'Security Error: You are not authorized to edit another student\'s diary entry.'}), 403
 
     if 'work_category' in data: diary.work_category = data['work_category']
@@ -696,16 +923,23 @@ def update_diary_entry(entry_id):
 
 @student_bp.route('/diary/<int:entry_id>', methods=['DELETE'])
 def delete_diary_entry(entry_id):
-    email = request.args.get('user_email', '').strip().lower()
-    user = User.query.filter((User.email == email) | (User.student_id == email.upper())).first() if email else None
+    email = (request.args.get('user_email') or request.args.get('email') or '').strip().lower()
+    user_id = request.args.get('user_id')
+
+    user = None
+    if email:
+        user = User.query.filter((User.email == email) | (User.student_id == email.upper())).first()
+    elif user_id:
+        user = User.query.get(user_id)
+
     if not user:
-        user = User.query.filter_by(role='STUDENT').first()
+        return jsonify({'success': False, 'message': 'Authenticated user not found.'}), 404
 
     diary = DailyDiary.query.get(entry_id)
     if not diary:
         return jsonify({'success': False, 'message': 'Diary entry not found.'}), 404
 
-    if user and diary.student_id != user.id:
+    if diary.student_id != user.id:
         return jsonify({'success': False, 'message': 'Security Error: You are not authorized to delete another student\'s diary entry.'}), 403
 
     db.session.delete(diary)
@@ -715,12 +949,121 @@ def delete_diary_entry(entry_id):
 
 @student_bp.route('/team-diary', methods=['GET'])
 def get_team_diary():
-    team_id = request.args.get('team_id')
-    if not team_id:
-        return jsonify({'success': False, 'message': 'Team ID required.'}), 400
+    team_id_param = request.args.get('team_id')
+    user_email = request.args.get('email', '').strip().lower()
+    user_id = request.args.get('user_id')
 
-    entries = DailyDiary.query.filter_by(team_id=team_id).order_by(DailyDiary.date.desc(), DailyDiary.created_at.desc()).all()
+    user = None
+    if user_email:
+        user = User.query.filter((User.email == user_email) | (User.student_id == user_email.upper())).first()
+    elif user_id:
+        user = User.query.get(user_id)
+
+    team = None
+    if team_id_param:
+        team = Team.query.filter((Team.team_id == team_id_param) | (Team.id == team_id_param)).first()
+
+    if not team and user:
+        membership = TeamMember.query.filter_by(user_id=user.id).first()
+        if membership:
+            team = membership.team_obj
+        if not team:
+            team = Team.query.filter_by(leader_id=user.id).first()
+
+    if not team:
+        return jsonify({'success': False, 'message': 'Project team not found.'}), 404
+
+    if user:
+        user_memberships = TeamMember.query.filter_by(user_id=user.id, team_id=team.id).first()
+        is_leader = (team.leader_id == user.id)
+        if not user_memberships and not is_leader and user.role not in ['ADMIN', 'GUIDE', 'COORDINATOR']:
+            return jsonify({'success': False, 'message': 'Security Error: You are not authorized to view another team\'s diary entries.'}), 403
+
+    entries = DailyDiary.query.filter_by(team_id=team.id).order_by(DailyDiary.date.desc(), DailyDiary.created_at.desc()).all()
     return jsonify({
         'success': True,
+        'team_id': team.team_id,
         'entries': [e.to_dict() for e in entries]
     }), 200
+
+@student_bp.route('/marks-card-pdf', methods=['GET'])
+def download_student_marks_card():
+    """
+    GET /api/student/marks-card-pdf?phase=1&review=1&email=...
+    Generates and downloads the student's own individual CIE marks card matching GNDEC standard.
+    """
+    from services.pdf_template import build_review1_pdf
+    from flask import send_file
+
+    email = (request.args.get('email') or request.args.get('user_email') or '').strip().lower()
+    user_id = request.args.get('user_id')
+    user = None
+
+    if email:
+        user = User.query.filter((User.email == email) | (User.student_id == email.upper())).first()
+    elif user_id:
+        user = User.query.get(user_id)
+
+    if not user:
+        user = User.query.filter(User.role.in_(['STUDENT', 'TEAM_LEADER'])).first() or User.query.first()
+
+    if not user:
+        return jsonify({'success': False, 'message': 'Student record not found.'}), 404
+
+    try:
+        phase = int(request.args.get('phase', 1))
+        review = int(request.args.get('review', 1))
+    except (ValueError, TypeError):
+        phase, review = 1, 1
+
+    membership = TeamMember.query.filter_by(user_id=user.id).first()
+    team = membership.team_obj if membership else None
+    if not team:
+        team = Team.query.filter_by(leader_id=user.id).first()
+
+    mark = None
+    if team:
+        from models import StudentReviewMark
+        mark = StudentReviewMark.query.filter_by(
+            student_id=user.id,
+            team_id=team.id,
+            phase_number=phase,
+            review_number=review
+        ).first()
+
+    if not mark:
+        class BlankEvaluation:
+            phase_number = phase
+            review_number = review
+            criteria1 = 0
+            criteria2 = 0
+            criteria3 = 0
+            criteria4 = 0
+            guide_criteria1 = 0
+            guide_criteria2 = 0
+            guide_criteria3 = 0
+            guide_criteria4 = 0
+            member1_criteria1 = 0
+            member1_criteria2 = 0
+            member1_criteria3 = 0
+            member1_criteria4 = 0
+            member2_criteria1 = 0
+            member2_criteria2 = 0
+            member2_criteria3 = 0
+            member2_criteria4 = 0
+            marks_obtained = 0
+        mark = BlankEvaluation()
+
+    user.project_title = team.title if team else "Final Year Major Project"
+    user.group_no = team.team_id if team else "N/A"
+    user.seat_no = user.usn or user.student_id or ""
+
+    pdf_buffer = build_review1_pdf(user, mark, phase=phase, review=review)
+    clean_usn = (user.usn or user.student_id or f"student_{user.id}").replace('/', '_')
+    return send_file(
+        pdf_buffer,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f"CIE_Marks_Card_Phase{phase}_Review{review}_{clean_usn}.pdf"
+    )
+

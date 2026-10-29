@@ -2,12 +2,12 @@ import { motion } from 'framer-motion';
 
 export default function CoordinatorStats({ stats }) {
   const STAT_ITEMS = [
-    { label: 'Total Teams', value: stats?.totalTeams ?? 48, icon: '👥' },
-    { label: 'Active Projects', value: stats?.activeProjects ?? 42, icon: '⚡' },
-    { label: 'Guides', value: stats?.guides ?? 18, icon: '👨‍🏫' },
-    { label: 'Pending Allocations', value: stats?.pendingAllocations ?? 4, icon: '⏳' },
-    { label: 'Upcoming Reviews', value: stats?.upcomingReviews ?? 8, icon: '📅' },
-    { label: 'Pending Evaluations', value: stats?.pendingEvaluations ?? 6, icon: '📊' },
+    { label: 'Total Teams', value: stats?.totalTeams ?? stats?.total_teams ?? 0, icon: '👥' },
+    { label: 'Active Projects', value: stats?.activeProjects ?? stats?.active_projects ?? 0, icon: '⚡' },
+    { label: 'Guides', value: stats?.guides ?? 0, icon: '👨‍🏫' },
+    { label: 'Pending Allocations', value: stats?.pendingAllocations ?? stats?.pending_allocations ?? 0, icon: '⏳' },
+    { label: 'Upcoming Reviews', value: stats?.upcomingReviews ?? stats?.upcoming_reviews ?? 0, icon: '📅' },
+    { label: 'Pending Evaluations', value: stats?.pendingEvaluations ?? stats?.pending_evaluations ?? 0, icon: '📊' },
   ];
 
   return (

@@ -2,11 +2,11 @@ import { motion } from 'framer-motion';
 
 export default function GuideStats({ stats }) {
   const STAT_ITEMS = [
-    { label: 'Assigned Teams', value: stats?.assignedTeams ?? 8, icon: '👥' },
-    { label: 'Pending Reviews', value: stats?.pendingReviews ?? 3, icon: '⏳' },
-    { label: 'Documents to Review', value: stats?.documentsToReview ?? 5, icon: '📑' },
-    { label: 'Upcoming Evaluations', value: stats?.upcomingEvaluations ?? 2, icon: '📅' },
-    { label: 'Completed Evaluations', value: stats?.completedEvaluations ?? 14, icon: '✅' },
+    { label: 'Assigned Teams', value: stats?.assignedTeams ?? stats?.assigned_teams ?? 0, icon: '👥' },
+    { label: 'Pending Reviews', value: stats?.pendingReviews ?? stats?.pending_reviews ?? 0, icon: '⏳' },
+    { label: 'Documents to Review', value: stats?.documentsToReview ?? stats?.documents_to_review ?? 0, icon: '📑' },
+    { label: 'Upcoming Evaluations', value: stats?.upcomingEvaluations ?? stats?.upcoming_evaluations ?? 0, icon: '📅' },
+    { label: 'Completed Evaluations', value: stats?.completedEvaluations ?? stats?.completed_evaluations ?? 0, icon: '✅' },
   ];
 
   return (
